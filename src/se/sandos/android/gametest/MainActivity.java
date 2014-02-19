@@ -19,9 +19,10 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.MulticastLock;
 import android.os.Build;
@@ -49,6 +50,7 @@ public class MainActivity extends Activity {
 	private InetAddress ip;
 	private InetAddress broadcast;
 	
+	private Thread recvThread;
 	private Thread sendThread;
 	private final BlockingQueue<DatagramPacket> sendQueue = new ArrayBlockingQueue<DatagramPacket>(10);
 	
@@ -70,6 +72,9 @@ public class MainActivity extends Activity {
 	
 	private GameSimulation sim;
 	
+	public SoundPool soundPool;
+	public int clickSoundId;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -78,8 +83,13 @@ public class MainActivity extends Activity {
 		gameView.setRenderer(gr);
 		setContentView(gameView);
 		
-		sim = new GameSimulation();
+		sim = new GameSimulation(this);
 		gr.setSim(sim);
+		
+		soundPool = new SoundPool(1, AudioManager.STREAM_MUSIC, 0);
+		clickSoundId = soundPool.load(this, R.raw.click, 1);
+		
+		soundPool.play(clickSoundId, 1.0f, 1.0f, 1, -1, 1.0f);
 	}
 	
 	@Override
@@ -98,10 +108,7 @@ public class MainActivity extends Activity {
         ip = getIpAddress();
         broadcast = getBroadcast(ip);
         binaryMessage.reset();
-        try {
-			binaryMessage.writeInt(PKT_HELLO);
-		} catch (IOException e2) {
-		}
+		binaryMessage.writeInt(PKT_HELLO);
         byte[] message = binaryMessage.getWrittenCopy();
         Log.v(TAG, "Offset: " + binaryMessage.getOffset() + "|" + binaryMessage.limit() + "|" + binaryMessage.capa());
         
@@ -118,7 +125,7 @@ public class MainActivity extends Activity {
         
 //		setStrictMode();
 
-		Thread thread = new Thread(new Runnable() {
+        recvThread = new Thread(new Runnable() {
 			public void run() {
 				try {
 					start_UDP();
@@ -127,9 +134,9 @@ public class MainActivity extends Activity {
 				}
 			}
 		});
-		thread.setName("UDPreceiver");
-		thread.setPriority(Thread.MAX_PRIORITY);
-		thread.start();
+        recvThread.setName("UDPreceiver");
+        recvThread.setPriority(Thread.MAX_PRIORITY);
+        recvThread.start();
 		
 		sendThread = new Thread("UDPsender") {
 			public void run() {
@@ -155,18 +162,21 @@ public class MainActivity extends Activity {
 					}
 					else
 					{
-						for(InetAddress ia : peers) {
-							binaryMessage.reset();
-							try {
-								binaryMessage.writeInt(PKT_PING).writeInt(pingCounter).writeLong(System.nanoTime());
-								sim.serialize(binaryMessage);
-								sendUDPMessage(packet(binaryMessage.getWritten(), ia));
-							} catch (IOException e) {
-								Log.v(TAG, "Problem sending package: " + e.getMessage());
+						synchronized (binaryMessage) {
+							for(InetAddress ia : peers) {
+								binaryMessage.reset();
+								try {
+									binaryMessage.writeInt(PKT_PING).writeInt(pingCounter).writeLong(System.nanoTime());
+									sim.serialize(binaryMessage);
+									sendUDPMessage(packet(binaryMessage.getWritten(), ia));
+								} catch (IOException e) {
+									Log.v(TAG, "Problem sending package: " + e.getMessage());
+								}
 							}
 						}
 					}
 				}
+				Log.v(TAG, "Interrupted pacer thread");
 			}
 		};
 		paceThread.setPriority(Thread.MAX_PRIORITY);
@@ -228,7 +238,8 @@ public class MainActivity extends Activity {
 		Log.v(TAG, "PAUSE");
 		
 		paceThread.interrupt();
-
+		recvThread.interrupt();
+		
 		ml.release();
 		
 		if(serverSocketUDP != null) {
@@ -278,50 +289,51 @@ public class MainActivity extends Activity {
 			serverSocketUDP.receive(receivePacket);
 
 			if (!receivePacket.getAddress().equals(ip)) {
-				
-				binaryMessage.parseFrom(receivePacket.getData());
-				int firstInt = binaryMessage.readInt();
-				if(firstInt == PKT_HELLO) {
-					if(!peers.contains(receivePacket.getAddress())) {
-						Log.v(TAG, "Got package from new PEER: " + receivePacket.getAddress());
-						peers.add(receivePacket.getAddress());
+				synchronized (binaryMessage) {
+					binaryMessage.parseFrom(receivePacket.getData());
+					int firstInt = binaryMessage.readInt();
+					if(firstInt == PKT_HELLO) {
+						if(!peers.contains(receivePacket.getAddress())) {
+							Log.v(TAG, "Got package from new PEER: " + receivePacket.getAddress());
+							peers.add(receivePacket.getAddress());
+						}
 					}
-				}
-				else if(firstInt == PKT_PING)
-				{
-					final long now = System.nanoTime();
-					int which = binaryMessage.readInt();
-					long timer = binaryMessage.readLong();
-					
-					sim.absorb(binaryMessage);
-					
-					binaryMessage.reset();
-					binaryMessage.writeInt(PKT_PONG).writeInt(which).writeLong(timer).writeLong(now);
-					
-					sendUDPMessage(packet(binaryMessage.getWritten(), receivePacket.getAddress()));
-				}
-
-				if(firstInt == PKT_PONG && pairTemp != null) {
-					final long sent = binaryMessage.readLong();
-					
-					final long now = System.nanoTime();
-					pairTemp.setPeer1(ip);
-					pairTemp.setPeer2(receivePacket.getAddress());
-					final PeerPair pp = pairTemp;
-					if(!latencies.containsKey(pairTemp))
+					else if(firstInt == PKT_PING)
 					{
-						PeerPair newKey = new PeerPair(ip, receivePacket.getAddress());
-						Latency l = new Latency();
-						l.to = (now-sent)/1000000;
-						latencies.put(newKey,  l);
-						updateUI(sent, now, newKey);
+						final long now = System.nanoTime();
+						int which = binaryMessage.readInt();
+						long timer = binaryMessage.readLong();
+						
+						sim.absorb(binaryMessage, receivePacket.getAddress());
+						
+						binaryMessage.reset();
+						binaryMessage.writeInt(PKT_PONG).writeInt(which).writeLong(timer).writeLong(now);
+						
+						sendUDPMessage(packet(binaryMessage.getWritten(), receivePacket.getAddress()));
 					}
-					else
-					{
-						latencies.get(pp).to = (now-sent)/1000000;
-						updateUI(sent, now, pp);
+	
+					if(firstInt == PKT_PONG && pairTemp != null) {
+						final long sent = binaryMessage.readLong();
+						
+						final long now = System.nanoTime();
+						pairTemp.setPeer1(ip);
+						pairTemp.setPeer2(receivePacket.getAddress());
+						final PeerPair pp = pairTemp;
+						if(!latencies.containsKey(pairTemp))
+						{
+							PeerPair newKey = new PeerPair(ip, receivePacket.getAddress());
+							Latency l = new Latency();
+							l.to = (now-sent)/1000000;
+							latencies.put(newKey,  l);
+							updateUI(sent, now, newKey);
+						}
+						else
+						{
+							latencies.get(pp).to = (now-sent)/1000000;
+							updateUI(sent, now, pp);
+						}
 					}
-				}
+				}//synchronized block
 			} else {
 			}
 		}// while ends

@@ -44,23 +44,34 @@ public class BinaryMessage {
 		readBuffer.position(0);
 	}
 	
-	public int readInt() throws IOException {
+	public int readInt() {
 		int r = readBuffer.getInt();
 		return r;
 	}
 
-	public long readLong() throws IOException {
+	public long readLong() {
 		long r = readBuffer.getLong();
 		return r;
 	}
 	
-	public BinaryMessage writeInt(int v) throws IOException
+	public boolean readBoolean()
+	{
+		return readBuffer.get() == 1 ? true : false;
+	}
+	
+	public BinaryMessage writeInt(int v)
 	{
 		writeBuffer.putInt(v);
 		return this;
 	}
 	
-	public BinaryMessage writeLong(long v) throws IOException
+	public BinaryMessage writeBoolean(boolean b)
+	{
+		writeBuffer.put((byte) (b ? 1 : 0));
+		return this;
+	}
+	
+	public BinaryMessage writeLong(long v)
 	{
 		writeBuffer.putLong(v);
 		return this;

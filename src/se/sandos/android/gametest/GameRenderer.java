@@ -26,6 +26,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 	
 	private GameSimulation gs;
 	
+	public volatile boolean clicked  = false;
+	
 	@Override
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
 		ship = new GLShip();
@@ -60,6 +62,10 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 		ship.draw(scratchMatrix);
 		ship2.draw(mMVPMatrix);
 		
+		if(clicked) {
+			gs.clicked();
+			clicked = false;
+		}
 		gs.step();
 //		long now = System.nanoTime();
 //		Log.v("majs", "FPS: " + 1.0/((now - lastFrame)/1000000000.0f));

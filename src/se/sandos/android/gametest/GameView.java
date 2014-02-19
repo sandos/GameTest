@@ -8,6 +8,7 @@ import android.view.MotionEvent;
 public class GameView extends GLSurfaceView {
 
 	GameRenderer render;
+	GameSimulation sim;
 	
 	public GameView(Context context) {
 		super(context);
@@ -20,14 +21,24 @@ public class GameView extends GLSurfaceView {
 		super.setRenderer(renderer);
 		this.render = (GameRenderer) renderer;
 	}
+	
+	public void setSim(GameSimulation s)
+	{
+		sim = s;
+	}
 
 	public boolean onTouchEvent(final MotionEvent event) {
-		queueEvent(new Runnable() {
-			public void run() {
-				render.setColor(event.getX() / getWidth(), event.getY()
-						/ getHeight(), 0.0f);
-			}
-		});
+		if(event.getActionMasked() == MotionEvent.ACTION_DOWN)
+		{
+			render.clicked = true;
+		}
+		
+//		queueEvent(new Runnable() {
+//			public void run() {
+//				render.setColor(event.getX() / getWidth(), event.getY()
+//						/ getHeight(), 0.0f);
+//			}
+//		});
 		return true;
 	}
 
