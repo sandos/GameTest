@@ -136,18 +136,31 @@ public class GameSimulation {
 		
 		boolean clicked = false;
 		if(numActions > 0) {
+			Log.v(TAG, "Got actions " + numActions);
 			for(int i=0; i<numActions; i++) {
 				if(actionList[i] != timestep) {
 					Log.v(TAG, "Action not on this timestep: " + actionList[i]);
+					restoreHistory(actionList[i]);
 				}
-				else
-				{
-					clicked = true;
-				}
+				clicked = true;
 			}
 			
 			numActions = 0;
 		}
+		
+		if(numInActions > 0) {
+			Log.v(TAG, "Got IN actions " + numInActions);
+			for(int i=0; i<numInActions; i++) {
+				if(actionInList[i] != timestep) {
+					Log.v(TAG, "Action not on this timestep: " + actionInList[i]);
+					restoreHistory(actionInList[i]);
+				}
+				clicked = true;
+			}
+			
+			numInActions = 0;
+		}
+
 		
 		if(pX >= MAX_X || pX <= MIN_X || clicked) {
 			//pX = MAX_X;
@@ -177,6 +190,29 @@ public class GameSimulation {
 		timestep++;
 	}
 
+	private void restoreHistory(int ts)
+	{
+		int offset = timestep - ts;
+		offset--;
+		if(offset >= 0 && offset < HISTORY_LENGTH)
+		{
+			pX = history[offset][0];
+			pY = history[offset][1];
+			vX = history[offset][2];
+			vY = history[offset][3];
+			r  = history[offset][4];
+			vR = history[offset][5];
+			
+			Log.v(TAG, "Rewound to " + ts + " from " + timestep);
+
+			timestep = ts;
+		}
+		else
+		{
+			Log.v(TAG, "Tried restoring history beyond limits: " + ts + "|" + timestep);
+		}
+	}
+
 	private void moveHistory() {
 		//Move history
 		for(int i=HISTORY_LENGTH-2; i>=0; i--)
@@ -203,10 +239,10 @@ public class GameSimulation {
 		if(peers && stepCheckCounter % 13 == 1)
 		{
 			if(avgOffset < -1) {
-				Log.v(TAG, "Running late, small step " + avgOffset);
+//				Log.v(TAG, "Running late, small step " + avgOffset);
 				actualStep();
 			} else if(avgOffset > 10) {
-				Log.v(TAG, "Skipping " + avgOffset);
+//				Log.v(TAG, "Skipping " + avgOffset);
 				return;
 			}
 		}
@@ -259,14 +295,13 @@ public class GameSimulation {
 			int offset = timestep - peerTimestep;
 			offset--;
 			if(offset < HISTORY_LENGTH && hash != history[offset][6]) {
-				Log.v(TAG, "SyncHIST: " + offset + "|" + printState(history[offset]) + "|" + timestep + "|" + peerTimestep);
-//				Log.v(TAG, "UNSYCNCH: ");
+				Log.v(TAG, "SyncHIST: " + offset + "|" + printState(history[offset]) + " [" + peer.getHostAddress() + "]");
 			}
 		}
 		else if(peerTimestep == timestep)
 		{
 			if(hashCode() != hash) {
-				Log.v(TAG, "UNSYNCH at current frame: " + timestep + "|" + hash + "!=" + hashCode());
+				Log.v(TAG, "UNSYNCH at current frame: " + timestep + "|" + hash + "!=" + hashCode() + " [" + peer.getHostAddress() + "]");
 			}
 		}
 		
@@ -280,9 +315,13 @@ public class GameSimulation {
 		}
 		for(int i=0; i<newActions; i++)
 		{
-			int timestep = d.readInt();
+			int ts = d.readInt();
 			if(numInActions < ACTION_MAX) {
-				actionInList[numInActions++] = timestep;
+				actionInList[numInActions++] = ts;
+			}
+			else
+			{
+				Log.v(TAG, "Discarded input, we will desynch");
 			}
 		}
 		
@@ -332,6 +371,7 @@ public class GameSimulation {
 		{
 			d.writeInt(actionOutList[i]);
 		}
+		numOutActions = 0;
 //		d.writeInt(pX).writeInt(pY).writeInt(vX).writeInt(vY).writeInt(r).writeInt(vR);
 //		
 //		for(int i=0; i<ENEMY_MAX; i++)
