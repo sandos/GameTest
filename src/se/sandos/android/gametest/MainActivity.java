@@ -90,6 +90,7 @@ public class MainActivity extends Activity {
 		clickSoundId = soundPool.load(this, R.raw.click, 1);
 		
 		soundPool.play(clickSoundId, 1.0f, 1.0f, 1, -1, 1.0f);
+		setVolumeControlStream(AudioManager.STREAM_MUSIC);
 	}
 	
 	@Override
