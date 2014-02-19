@@ -68,12 +68,18 @@ public class MainActivity extends Activity {
 	
 	private GameView gameView;
 	
+	private GameSimulation sim;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		gameView = new GameView(getApplicationContext());
-		gameView.setRenderer(new GameRenderer());
+		GameRenderer gr = new GameRenderer();
+		gameView.setRenderer(gr);
 		setContentView(gameView);
+		
+		sim = new GameSimulation();
+		gr.setSim(sim);
 	}
 	
 	@Override
@@ -153,6 +159,7 @@ public class MainActivity extends Activity {
 							binaryMessage.reset();
 							try {
 								binaryMessage.writeInt(PKT_PING).writeInt(pingCounter).writeLong(System.nanoTime());
+								sim.serialize(binaryMessage);
 								sendUDPMessage(packet(binaryMessage.getWritten(), ia));
 							} catch (IOException e) {
 								Log.v(TAG, "Problem sending package: " + e.getMessage());
@@ -172,6 +179,7 @@ public class MainActivity extends Activity {
 		}	
 	}
 	
+	@SuppressLint("NewApi")
 	@Override
 	public void onWindowFocusChanged(boolean hasFocus) {
 	        super.onWindowFocusChanged(hasFocus);
