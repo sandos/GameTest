@@ -292,6 +292,9 @@ public class MainActivity extends Activity {
 					final long now = System.nanoTime();
 					int which = binaryMessage.readInt();
 					long timer = binaryMessage.readLong();
+					
+					sim.absorb(binaryMessage);
+					
 					binaryMessage.reset();
 					binaryMessage.writeInt(PKT_PONG).writeInt(which).writeLong(timer).writeLong(now);
 					
