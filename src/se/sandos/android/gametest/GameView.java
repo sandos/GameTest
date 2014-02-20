@@ -14,6 +14,8 @@ public class GameView extends GLSurfaceView {
 		super(context);
 		
 		setEGLContextClientVersion(2);
+		
+//		setDebugFlags(DEBUG_CHECK_GL_ERROR | DEBUG_LOG_GL_CALLS);
 	}
 	
 	public void setRenderer(Renderer renderer)
