@@ -46,7 +46,14 @@ public class GLShip {
 		    "precision mediump float;" +
 		    "uniform vec4 vColor;" +
 		    "void main() {" +
-		    "  gl_FragColor = vColor;" +
+		    "  vec2 pos = mod(gl_FragCoord.xy, vec2(150.0)) - vec2(75.0);" +
+		    "  float dist_squared = dot(pos, pos);"	+
+//		    " gl_FragColor = (dist_squared < 400.0) ?" +
+//		    "     vec4(.90, .90, 1.0) :" + 
+//		    "     vec4(.20, .20, .10);" + 
+			"  gl_FragColor = vColor;" +
+			"  gl_FragColor.r = pos.x;" +
+			"  gl_FragColor.g = pos.y;" +
 		    "}";
 	
 	static final int COORDS_PER_VERTEX = 3;
@@ -82,6 +89,7 @@ public class GLShip {
         mProgram = GLES20.glCreateProgram();             // create empty OpenGL ES Program
         GLES20.glAttachShader(mProgram, vertexShader);   // add the vertex shader to program
         GLES20.glAttachShader(mProgram, fragmentShader); // add the fragment shader to program
+        
         GLES20.glLinkProgram(mProgram);                  // creates OpenGL ES program executables
 
 	}
@@ -123,14 +131,11 @@ public class GLShip {
 	    // Pass the projection and view transformation to the shader
 	    GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, scratchMatrix, 0);
 	    
-	    
-	    
 	    // Draw the triangle
 	    GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 3);
 
 	    // Disable vertex array
 	    GLES20.glDisableVertexAttribArray(mPositionHandle);
-	    
 	}
 
 	
