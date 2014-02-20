@@ -35,7 +35,6 @@ public class GameSimulation {
 	private int pX, pY, vX, vY, r, vR;
 	private int[][] history = new int[HISTORY_LENGTH][STATE_SIZE];
 	
-	
 	class Enemy {
 		int x, y, vX, vY, r, vR;
 		boolean alive;
@@ -68,14 +67,13 @@ public class GameSimulation {
 	private static final int MIN_Y = -10 << SHFT;
 	private static final int MAX_X = 10 << SHFT;
 	private static final int MAX_Y = 10 << SHFT;
-	private static final int ACTION_MAX = 10;
+	private static final int ACTION_MAX = 40;
+	private static final int INPUT_DELAY = 1;
 	
 	//List for internal handling
-	private int[] actionList = new int[ACTION_MAX];
-	private int numActions = 0;
+	private Action[] actionList = new Action[ACTION_MAX];
 	//List for sending on to network
-	private int[] actionOutList = new int[ACTION_MAX];
-	private int numOutActions = 0;
+	private Action[] actionOutList = new Action[ACTION_MAX];
 	
 	//Synch data, never sent out!
 	private Map<InetAddress, ArrayDeque<Integer>> timeOffsets = new HashMap <InetAddress, ArrayDeque<Integer>>();
@@ -87,10 +85,14 @@ public class GameSimulation {
 	
 	private MainActivity act;
 
-	//Player input from network
-	private int[] actionInList = new int[ACTION_MAX];
-	private int numInActions = 0;
+	class Action {
+		public int timestep = -1;
+		public int type;
+		public boolean applied = false;
+	}
 	
+	//Player input from network
+	private Action[] actionInList = new Action[ACTION_MAX];
 	
 	public GameSimulation(MainActivity activity)
 	{
@@ -108,6 +110,13 @@ public class GameSimulation {
 		{
 			shots[i] = new Shot();
 		}
+		for(int i=0; i<ACTION_MAX; i++)
+		{
+			actionInList[i] = new Action();
+			actionOutList[i] = new Action();
+			actionList[i] = new Action();
+		}
+
 	}
 	
 	public float r()
@@ -127,51 +136,77 @@ public class GameSimulation {
 	
 	private void actualStep()
 	{
+		
+		//XXX clean out buffer - allow sending every action a number of times
+//		int lastOut = -1;
+//		for(int i=0; i<numOutActions; i++)
+//		{
+//			if(lastOut < actionOutList[i].timestep) {
+//				lastOut = actionOutList[i].timestep; 
+//			}
+//		}
+//		if(timestep - lastOut > 5) {
+//			numOutActions = 0;
+//		}
+		
+		boolean clicked = false;
+		for(int i=0; i<ACTION_MAX; i++) {
+			if(actionList[i].timestep <= timestep && actionList[i].timestep != -1) {
+				if(actionList[i].applied) {
+					continue;
+				}
+				if(actionList[i].timestep < timestep) {
+					Log.v(TAG, "Action not on this timestep, internal: " + actionList[i].timestep + "|" + timestep);
+					restoreHistory(actionList[i]);
+				}
+				if(timestep == actionList[i].timestep) {
+					clicked = true;
+					actionList[i].applied = true;
+				}
+			} else {
+				//Future, we wait
+			}
+		}
+
+		for(int i=0; i<ACTION_MAX; i++) {
+			if(actionInList[i].timestep <= timestep && actionInList[i].timestep != -1) {
+				if(actionInList[i].applied) {
+					continue;
+				}
+				if(actionInList[i].timestep < timestep) {
+					Log.v(TAG, "Action not on this timestep, external: " + actionInList[i].timestep + "|" + timestep + "|" + i);
+					restoreHistory(actionInList[i]);
+				}
+				if(timestep == actionInList[i].timestep) {
+					clicked = true;
+					actionInList[i].applied = true;
+				}
+			} else {
+				//In the future, we wait
+			}
+		}
+		
 		moveHistory();
+		oneStep(clicked);
+	}
+
+	private void oneStep(boolean clicked) {
+		boolean bounce = false;
 		
 		pX += vX;
 		pY += vY;
 		
-		boolean bounce = false;
-		
-		boolean clicked = false;
-		if(numActions > 0) {
-			Log.v(TAG, "Got actions " + numActions);
-			for(int i=0; i<numActions; i++) {
-				if(actionList[i] != timestep) {
-					Log.v(TAG, "Action not on this timestep: " + actionList[i]);
-					restoreHistory(actionList[i]);
-				}
-				clicked = true;
-			}
-			
-			numActions = 0;
-		}
-		
-		if(numInActions > 0) {
-			Log.v(TAG, "Got IN actions " + numInActions);
-			for(int i=0; i<numInActions; i++) {
-				if(actionInList[i] != timestep) {
-					Log.v(TAG, "Action not on this timestep: " + actionInList[i]);
-					restoreHistory(actionInList[i]);
-				}
-				clicked = true;
-			}
-			
-			numInActions = 0;
-		}
-
-		
 		if(pX >= MAX_X || pX <= MIN_X || clicked) {
-			//pX = MAX_X;
 			pX -= vX;
 			vX = -vX;
 			bounce = true;
 			clicked = false;
+			if(clicked) {
+				Log.v(TAG, "User action taken here " + timestep);
+			}
 		} 
 		
 		if(pY >= MAX_Y || pY <= MIN_Y) {
-			//pY = MAX_Y;
 			pY -= vY;
 			vY = -vY;
 			bounce = true;
@@ -190,9 +225,9 @@ public class GameSimulation {
 		timestep++;
 	}
 
-	private void restoreHistory(int ts)
+	private boolean restoreHistory(Action a)
 	{
-		int offset = timestep - ts;
+		int offset = timestep - a.timestep;
 		offset--;
 		if(offset >= 0 && offset < HISTORY_LENGTH)
 		{
@@ -203,14 +238,30 @@ public class GameSimulation {
 			r  = history[offset][4];
 			vR = history[offset][5];
 			
-			Log.v(TAG, "Rewound to " + ts + " from " + timestep);
+			//Move history itself
+			for(int i=0; i<HISTORY_LENGTH-offset-1; i++)
+			{
+				history[i] = history[i+offset+1];
+			}
+			//XXX We just pray that we never end up in the "rewound" part of history, this might contain too old entries
+			//We should really just add a timestep field to the history itself
+			
+			Log.v(TAG, "Rewound to " + a.timestep + " from " + timestep);
 
-			timestep = ts;
+			timestep = a.timestep;
+			a.applied = true;
+			//XXX - We need to "un-apply" all the pending actions that we went past going backwards in time
+			//so they get applied when we start stepping again
+			
+			return true;
 		}
 		else
 		{
-			Log.v(TAG, "Tried restoring history beyond limits: " + ts + "|" + timestep);
+			Log.v(TAG, "Tried restoring history beyond limits: " + a.timestep + "|" + timestep);
+			a.timestep = -1;
 		}
+		
+		return false;
 	}
 
 	private void moveHistory() {
@@ -291,39 +342,52 @@ public class GameSimulation {
 		avgOffset = medians.get(medians.size()/2);
 		
 		int hash = d.readInt();
+		
+		int newActions = d.readInt();
+		if(newActions > 0)
+		{
+			Log.v(TAG, "Got actions from network: " + newActions + "|" + hash + "|" + peerTimestep + " " + timestep);
+			for(int i=0; i<newActions; i++)
+			{
+				int ts = d.readInt();
+				int type = d.readInt();
+				int freeSlot = findUnusedslot(actionInList, ts);
+				if(freeSlot != -1) {
+					if(actionInList[freeSlot].applied == true && actionInList[freeSlot].timestep == ts) {
+						//XXX Conflict resolution here, if there is NEW input, we need to unset applied. 
+						//If its identical, just keep on going on 
+					} else {
+						Log.v(TAG, "Adding new external action: " + ts + "|" + peerTimestep);
+						actionInList[freeSlot].timestep = ts;
+						actionInList[freeSlot].type = type;
+						actionInList[freeSlot].applied = false;
+					}
+				} else {
+					Log.v(TAG, "Discarded input, we will desynch");
+				}
+			}
+		}
+		
+		int peerX = d.readInt();
+		int peerY = d.readInt();
+		int peervX = d.readInt();
+		int peervY = d.readInt();
+
 		if(peerTimestep < timestep) {
 			int offset = timestep - peerTimestep;
 			offset--;
 			if(offset < HISTORY_LENGTH && hash != history[offset][6]) {
-				Log.v(TAG, "SyncHIST: " + offset + "|" + printState(history[offset]) + " [" + peer.getHostAddress() + "]");
+				Log.v(TAG, "SyncHIST: " + (timestep-offset) + "|" + printState(history[offset]) + " [" + peer.getHostAddress() + "]");
 			}
 		}
 		else if(peerTimestep == timestep)
 		{
 			if(hashCode() != hash) {
 				Log.v(TAG, "UNSYNCH at current frame: " + timestep + "|" + hash + "!=" + hashCode() + " [" + peer.getHostAddress() + "]");
+				Log.v(TAG, "Peervals: " + peerX +":" + pX + "|" + peerY +":" + pY + "|" + vX + ":" + peervX + "|" + peervY +"|" + vY);
 			}
 		}
-		
-		int newActions = d.readInt();
-		if(newActions > 0)
-		{
-			Log.v(TAG, "Got actions from network: " + newActions + "|" + hash + "|" + peerTimestep + " " + timestep);
-		}
-		if(newActions > 2) {
-			Log.v(TAG, "About to crash");
-		}
-		for(int i=0; i<newActions; i++)
-		{
-			int ts = d.readInt();
-			if(numInActions < ACTION_MAX) {
-				actionInList[numInActions++] = ts;
-			}
-			else
-			{
-				Log.v(TAG, "Discarded input, we will desynch");
-			}
-		}
+
 		
 //		Log.v(TAG, "Median of medians: " + m);
 	}
@@ -356,22 +420,41 @@ public class GameSimulation {
 	
 	public int hashCode()
 	{
-		//return pX ^ (pX >> 6) ^ (pX << 4) ^ pY ^ (pY >> 6) ^ (pY << 7) ^ vX ^ vY ^ r ^ vR; 
-		return pX; 
+		return pX ^ (pX >> 6) ^ (pX << 4) ^ pY ^ (pY >> 6) ^ (pY << 7) ^ vX ^ vY ^ r ^ vR;
 	}
-			
 	
 	public synchronized void serialize(BinaryMessage d) throws IOException {
 		d.writeInt(timestep);
 		
 		d.writeInt(hashCode());
-		
-		d.writeInt(numOutActions);
-		for(int i=0; i<numOutActions; i++)
+
+		//Clean old items from actionOutList
+		for(int i=0; i<ACTION_MAX; i++)
 		{
-			d.writeInt(actionOutList[i]);
+			if(actionOutList[i].timestep != -1) {
+				if(timestep - actionOutList[i].timestep > HISTORY_LENGTH*2) {
+					actionOutList[i].timestep = -1;
+					Log.v(TAG, "Clearing old out-action at index " + i + "|" + timestep);
+				}
+			}
 		}
-		numOutActions = 0;
+		int actionCount = countActions(actionOutList);
+		d.writeInt(actionCount);
+		for(int i=0; i<ACTION_MAX; i++)
+		{
+			if(actionOutList[i].timestep != -1) {
+				Log.v(TAG, "Writing action to network: " + actionOutList[i].timestep + "|" + timestep + "| Index: " + i);
+				d.writeInt(actionOutList[i].timestep);
+				d.writeInt(actionOutList[i].type);
+			}
+		}
+		
+		d.writeInt(pX);
+		d.writeInt(pY);
+		d.writeInt(vX);
+		d.writeInt(vY);
+		
+		//numOutActions = 0;
 //		d.writeInt(pX).writeInt(pY).writeInt(vX).writeInt(vY).writeInt(r).writeInt(vR);
 //		
 //		for(int i=0; i<ENEMY_MAX; i++)
@@ -385,14 +468,64 @@ public class GameSimulation {
 //		}
 	}
 
-	public void clicked()
+	private int countActions(Action[] list) {
+		int count = 0;
+		for(int i=0; i<list.length; i++)
+		{
+			if(list[i].timestep != -1) {
+				count++;
+			}
+		}
+		return count;
+	}
+
+	private int findAction(Action[] list, int t)
 	{
-		if(numActions < ACTION_MAX) {
-			actionList[numActions++] = timestep;
+		for(int i=0; i<ACTION_MAX; i++) {
+			if(list[i].timestep == t) {
+				return i;
+			}
 		}
 		
-		if(numOutActions < ACTION_MAX) {
-			actionOutList[numOutActions++] = timestep;
+		return -1;
+	}
+	
+	private int findUnusedslot(Action[] list, int timestep)
+	{
+		int found = findAction(list, timestep);
+		
+		if(found != -1) {
+			return found;
+		}
+		
+		for(int i=0; i<list.length; i++)
+		{
+			if(list[i].timestep == -1) {
+				return i;
+			}
+		}
+		
+		return -1;
+	}
+	
+	public void clicked()
+	{
+		int targetTS = timestep+1+INPUT_DELAY;
+		int freeSlot = findUnusedslot(actionList, targetTS);
+		
+		if(freeSlot != -1) {
+			Log.v(TAG, "Got new internal action" + targetTS + "|" + timestep);
+			actionList[freeSlot].timestep = targetTS;
+			actionList[freeSlot].type     = 1;
+			actionList[freeSlot].applied  = false;
+		}
+		
+		freeSlot = findUnusedslot(actionOutList, actionOutList[freeSlot].timestep);
+		if(freeSlot != -1) {
+			Log.v(TAG, "Got new external action" + targetTS + "|" + timestep);
+			actionOutList[freeSlot].timestep = targetTS;
+			actionOutList[freeSlot].type     = 1;
+			actionOutList[freeSlot].applied  = false;
 		}
 	}
 }
