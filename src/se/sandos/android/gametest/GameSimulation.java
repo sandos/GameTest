@@ -92,7 +92,7 @@ public class GameSimulation {
 	}
 	
 	//Player input from network
-	private Action[] actionInList = new Action[ACTION_MAX+10];
+	private Action[] actionInList = new Action[ACTION_MAX];
 	
 	private int highestTimestepSeen;
 	private int highestSynchedTimestep;
@@ -541,20 +541,18 @@ public class GameSimulation {
 	{
 		int targetTS = timestep+1+INPUT_DELAY;
 		int freeSlot = findUnusedslot(actionList, targetTS);
-		
-		if(freeSlot != -1) {
-			Log.v(TAG, "Got new internal action " + targetTS + "|" + timestep);
+		int outfreeSlot = findUnusedslot(actionOutList, targetTS);
+
+		if(freeSlot != -1 && outfreeSlot != -1) {
+			//Log.v(TAG, "Got new internal action " + targetTS + "|" + timestep);
 			actionList[freeSlot].timestep = targetTS;
 			actionList[freeSlot].type     = 1;
 			actionList[freeSlot].applied  = false;
-		}
-		
-		freeSlot = findUnusedslot(actionOutList, targetTS);
-		if(freeSlot != -1) {
-			Log.v(TAG, "Got new external action " + targetTS + "|" + timestep + "|" + highestSynchedTimestep);
-			actionOutList[freeSlot].timestep = targetTS;
-			actionOutList[freeSlot].type     = 1;
-			actionOutList[freeSlot].applied  = false;
+			
+			Log.v(TAG, "Got new int/ext action " + targetTS + "|" + timestep + "|" + highestSynchedTimestep);
+			actionOutList[outfreeSlot].timestep = targetTS;
+			actionOutList[outfreeSlot].type     = 1;
+			actionOutList[outfreeSlot].applied  = false;
 		}
 	}
 
