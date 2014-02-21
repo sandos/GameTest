@@ -75,50 +75,25 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 		BinaryMessage binaryMessage = new BinaryMessage();
 		
  		for(int x=0; x<ITERATIONS; x++) {
-			if(sim1.timestep() < 114) {
+			sim1.clicked();
+
+			stepSynched(sim1, sim2, binaryMessage);
+		}
+	}
+
+	public void testDuplex() throws Throwable
+	{
+		GameSimulation sim1 = new GameSimulation(act);
+		GameSimulation sim2 = new GameSimulation(act);
+		
+		BinaryMessage binaryMessage = new BinaryMessage();
+		
+ 		for(int x=0; x<ITERATIONS; x++) {
+			if(sim1.timestep() % 10 == 3) {
 				sim1.clicked();
 			}
-
-			stepSynched(sim1, sim2, binaryMessage);
-		}
-	}
-
-	public void testDuplexSuccess() throws IOException
-	{
-		GameSimulation sim1 = new GameSimulation(act);
-		GameSimulation sim2 = new GameSimulation(act);
-		
-		BinaryMessage binaryMessage = new BinaryMessage();
-		
- 		for(int x=0; x<ITERATIONS; x++) {
-			if(sim1.timestep() < 403) {
-				if(sim1.timestep() % 10 == 3) {
-					sim1.clicked();
-				}
-				if(sim1.timestep() % 10 == 4) {
-					sim2.clicked();
-				}
-			}
-
-			stepSynched(sim1, sim2, binaryMessage);
-		}
-	}
-
-	public void testDuplexFail() throws Throwable
-	{
-		GameSimulation sim1 = new GameSimulation(act);
-		GameSimulation sim2 = new GameSimulation(act);
-		
-		BinaryMessage binaryMessage = new BinaryMessage();
-		
- 		for(int x=0; x<ITERATIONS; x++) {
-			if(sim1.timestep() < 404) {
-				if(sim1.timestep() % 10 == 3) {
-					sim1.clicked();
-				}
-				if(sim1.timestep() % 10 == 4) {
-					sim2.clicked();
-				}
+			if(sim1.timestep() % 10 == 4) {
+				sim2.clicked();
 			}
 
 			try {
@@ -145,10 +120,11 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 		sim2.serialize(binaryMessage);
 		binaryMessage.parseFrom(binaryMessage.getWritten());
 		sim1.absorb(binaryMessage, addr);
-		
+
+		//Run the assert on the old, so we get the debug log output when failing
+		Assert.assertEquals(sim1.hashCode(), sim2.hashCode());
+
 		sim1.step();
 		sim2.step();
-		
-		Assert.assertEquals(sim1.hashCode(), sim2.hashCode());
 	}
 }
