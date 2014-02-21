@@ -68,7 +68,7 @@ public class GameSimulation {
 	private static final int MAX_X = 10 << SHFT;
 	private static final int MAX_Y = 10 << SHFT;
 	private static final int ACTION_MAX = 40;
-	private static final int INPUT_DELAY = 10;
+	private static final int INPUT_DELAY = 2;
 	
 	//List for internal handling
 	private Action[] actionList = new Action[ACTION_MAX];
@@ -101,8 +101,8 @@ public class GameSimulation {
 	{
 		act = activity;
 		
-		vX = 14000;
-		vY = 51200;
+		vX = 44000;
+		vY = 21200;
 		vR = 700000;
 		
 		for(int i=0; i<ENEMY_MAX; i++)
@@ -353,17 +353,10 @@ public class GameSimulation {
 		int hash = d.readInt();
 		
 		int newActions = d.readInt();
+		cleanIncomingActionLists();
 		if(newActions > 0)
 		{
 //			Log.v(TAG, "Got actions from network: " + newActions + "|" + hash + "|" + peerTimestep + " " + timestep);
-			for(int i=0;i<actionInList.length; i++)
-			{
-				if((timestep - actionInList[i].timestep) > HISTORY_LENGTH*2)
-				{
-					//Clean this item
-					actionInList[i].timestep = -1;
-				}
-			}
 			for(int i=0; i<newActions; i++)
 			{
 				int ts = d.readInt();
@@ -419,6 +412,21 @@ public class GameSimulation {
 //		Log.v(TAG, "Median of medians: " + m);
 	}
 
+	private void cleanIncomingActionLists() {
+		for(int i=0;i<actionInList.length; i++) {
+			if((timestep - actionInList[i].timestep) > HISTORY_LENGTH*2) {
+				//Clean this item
+				actionInList[i].timestep = -1;
+			}
+		}
+		for(int i=0;i<actionList.length; i++) {
+			if((timestep - actionList[i].timestep) > HISTORY_LENGTH*2) {
+				//Clean this item
+				actionList[i].timestep = -1;
+			}
+		}
+	}
+
 	private int medianForPeer(InetAddress peer)
 	{
 		if(timeOffsets.size() == 0 || !timeOffsets.containsKey(peer))
@@ -455,18 +463,7 @@ public class GameSimulation {
 		
 		d.writeInt(hashCode());
 
-		//Clean old items from actionOutList
-		for(int i=0; i<actionOutList.length; i++)
-		{
-			if(actionOutList[i].timestep != -1) {
-				//We want this to be lower than for cleaning incoming items, otherwise the "client"/"receiver" will forget
-				//actions and try to re-play them
-				if(timestep - actionOutList[i].timestep > HISTORY_LENGTH) {
-					actionOutList[i].timestep = -1;
-//					Log.v(TAG, "Clearing old out-action at index " + i + "|" + timestep);
-				}
-			}
-		}
+		cleanActionOutList();
 		int actionCount = countActions(actionOutList);
 		d.writeInt(actionCount);
 		for(int i=0; i<actionOutList.length; i++)
@@ -495,6 +492,21 @@ public class GameSimulation {
 //		{
 //			shots[i].serialize(d);
 //		}
+	}
+
+	private void cleanActionOutList() {
+		//Clean old items from actionOutList
+		for(int i=0; i<actionOutList.length; i++)
+		{
+			if(actionOutList[i].timestep != -1) {
+				//We want this to be lower than for cleaning incoming items, otherwise the "client"/"receiver" will forget
+				//actions and try to re-play them
+				if(timestep - actionOutList[i].timestep > HISTORY_LENGTH) {
+					actionOutList[i].timestep = -1;
+//					Log.v(TAG, "Clearing old out-action at index " + i + "|" + timestep);
+				}
+			}
+		}
 	}
 
 	private int countActions(Action[] list) {
@@ -543,6 +555,8 @@ public class GameSimulation {
 		int freeSlot = findUnusedslot(actionList, targetTS);
 		int outfreeSlot = findUnusedslot(actionOutList, targetTS);
 
+		cleanIncomingActionLists();
+		cleanActionOutList();
 		if(freeSlot != -1 && outfreeSlot != -1) {
 			//Log.v(TAG, "Got new internal action " + targetTS + "|" + timestep);
 			actionList[freeSlot].timestep = targetTS;
@@ -553,6 +567,10 @@ public class GameSimulation {
 			actionOutList[outfreeSlot].timestep = targetTS;
 			actionOutList[outfreeSlot].type     = 1;
 			actionOutList[outfreeSlot].applied  = false;
+		}
+		else
+		{
+			Log.v(TAG, "Discarding click: " + freeSlot + "|" + outfreeSlot);
 		}
 	}
 
