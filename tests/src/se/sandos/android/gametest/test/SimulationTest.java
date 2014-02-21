@@ -50,23 +50,6 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 		super(activityClass);
 	}
 
-	public void testSimplexSuccess() throws IOException
-	{
-		GameSimulation sim1 = new GameSimulation(act);
-		GameSimulation sim2 = new GameSimulation(act);
-		
-		BinaryMessage binaryMessage = new BinaryMessage();
-
-		
-		for(int x=0; x<ITERATIONS; x++) {
-			if(sim1.timestep() < 113) {
-				sim1.clicked();
-			}
-
-			stepSynched(sim1, sim2, binaryMessage);
-		}
-	}
-
 	public void testSimplexFail() throws IOException
 	{
 		GameSimulation sim1 = new GameSimulation(act);
