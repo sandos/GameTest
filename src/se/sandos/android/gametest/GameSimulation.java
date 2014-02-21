@@ -92,7 +92,7 @@ public class GameSimulation {
 	}
 	
 	//Player input from network
-	private Action[] actionInList = new Action[ACTION_MAX];
+	private Action[] actionInList = new Action[ACTION_MAX+10];
 	
 	private int highestTimestepSeen;
 	private int highestSynchedTimestep;
@@ -115,16 +115,19 @@ public class GameSimulation {
 		}
 		for(int i=0; i<ACTION_MAX; i++)
 		{
-			actionInList[i] = new Action();
 			actionOutList[i] = new Action();
 			actionList[i] = new Action();
+		}
+		for(int i=0; i<actionInList.length; i++)
+		{
+			actionInList[i] = new Action();
 		}
 
 	}
 	
 	public float r()
 	{
-		return r/SCALE;
+		return r / SCALE;
 	}
 	
 	public float x()
@@ -140,7 +143,7 @@ public class GameSimulation {
 	private void actualStep()
 	{
 		boolean clicked = false;
-		for(int i=0; i<ACTION_MAX; i++) {
+		for(int i=0; i<actionList.length; i++) {
 			if(actionList[i].timestep <= timestep && actionList[i].timestep != -1) {
 				if(actionList[i].applied) {
 					continue;
@@ -158,7 +161,7 @@ public class GameSimulation {
 			}
 		}
 
-		for(int i=0; i<ACTION_MAX; i++) {
+		for(int i=0; i<actionInList.length; i++) {
 			if(actionInList[i].timestep <= timestep && actionInList[i].timestep != -1) {
 				if(actionInList[i].applied) {
 					continue;
@@ -353,7 +356,7 @@ public class GameSimulation {
 		if(newActions > 0)
 		{
 //			Log.v(TAG, "Got actions from network: " + newActions + "|" + hash + "|" + peerTimestep + " " + timestep);
-			for(int i=0;i<ACTION_MAX; i++)
+			for(int i=0;i<actionInList.length; i++)
 			{
 				if((timestep - actionInList[i].timestep) > HISTORY_LENGTH*2)
 				{
@@ -453,23 +456,23 @@ public class GameSimulation {
 		d.writeInt(hashCode());
 
 		//Clean old items from actionOutList
-		for(int i=0; i<ACTION_MAX; i++)
+		for(int i=0; i<actionOutList.length; i++)
 		{
 			if(actionOutList[i].timestep != -1) {
 				//We want this to be lower than for cleaning incoming items, otherwise the "client"/"receiver" will forget
 				//actions and try to re-play them
 				if(timestep - actionOutList[i].timestep > HISTORY_LENGTH) {
 					actionOutList[i].timestep = -1;
-					Log.v(TAG, "Clearing old out-action at index " + i + "|" + timestep);
+//					Log.v(TAG, "Clearing old out-action at index " + i + "|" + timestep);
 				}
 			}
 		}
 		int actionCount = countActions(actionOutList);
 		d.writeInt(actionCount);
-		for(int i=0; i<ACTION_MAX; i++)
+		for(int i=0; i<actionOutList.length; i++)
 		{
 			if(actionOutList[i].timestep != -1) {
-				Log.v(TAG, "Writing action to network: " + actionOutList[i].timestep + "|" + timestep + "| Index: " + i);
+//				Log.v(TAG, "Writing action to network: " + actionOutList[i].timestep + "|" + timestep + "| Index: " + i);
 				d.writeInt(actionOutList[i].timestep);
 				d.writeInt(actionOutList[i].type);
 			}
@@ -507,7 +510,7 @@ public class GameSimulation {
 
 	private int findAction(Action[] list, int t)
 	{
-		for(int i=0; i<ACTION_MAX; i++) {
+		for(int i=0; i<list.length; i++) {
 			if(list[i].timestep == t) {
 				return i;
 			}
@@ -553,5 +556,9 @@ public class GameSimulation {
 			actionOutList[freeSlot].type     = 1;
 			actionOutList[freeSlot].applied  = false;
 		}
+	}
+
+	public int timestep() {
+		return timestep;
 	}
 }
