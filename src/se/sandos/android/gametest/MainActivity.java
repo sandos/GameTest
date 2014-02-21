@@ -157,7 +157,7 @@ public class MainActivity extends Activity {
 			public void run() {
 				int cnt = 0;
 				while(!isInterrupted()) {
-					SystemClock.sleep(40);
+					SystemClock.sleep(10);
 					if((cnt++) % 100 == 10) {
 						sendUDPMessage(helloWorldPacket);
 					}
