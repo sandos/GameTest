@@ -21,6 +21,9 @@ import android.util.Log;
  *
  */
 public class GameSimulation {
+	//Column number for history array
+	private static final int HISTORY_TIMESTEP = 7;
+	
 	private static final int MEDIAN_NUMBER = 23;
 	private static final int ENEMY_MAX = 10;
 	private static final int SHOTS_MAX = 10;
@@ -121,6 +124,9 @@ public class GameSimulation {
 		for(int i=0; i<actionInList.length; i++)
 		{
 			actionInList[i] = new Action();
+		}
+		for(int i=0; i<HISTORY_LENGTH; i++) {
+			history[i][HISTORY_TIMESTEP] = -1;
 		}
 
 	}
@@ -386,9 +392,9 @@ public class GameSimulation {
 		if(peerTimestep < timestep) {
 			int offset = timestep - peerTimestep;
 			offset--;
-			if(offset < HISTORY_LENGTH && hash != history[offset][6]) {
+			if(offset < HISTORY_LENGTH && hash != history[offset][6] && history[offset][7] != -1) {
 				Log.v(TAG, "SyncHIST: " + peerTimestep + "|" + printState(history[offset]) + " [" + peer.getHostAddress() + "] " + highestSynchedTimestep);
-				Log.v(TAG, "Peervals: " + peerX +":" + history[offset][0] + "|" + peerY +":" + history[offset][1] + "|" + peervX + ":" + history[offset][2] + "|" + peervY +":" + history[offset][2]);
+				Log.v(TAG, "Peervals: " + peerX +":" + history[offset][0] + "|" + peerY +":" + history[offset][1] + "|" + peervX + ":" + history[offset][2] + "|" + peervY +":" + history[offset][3]);
 			} else {
 				if(highestSynchedTimestep < peerTimestep) {
 					highestSynchedTimestep = peerTimestep;
