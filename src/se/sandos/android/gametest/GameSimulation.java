@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -22,7 +23,7 @@ import android.util.Log;
  */
 public class GameSimulation {
 	//Column number for history array
-	private static final int HISTORY_TIMESTEP = 7;
+	private static final int HISTORY_TIMESTEP_COL = 7;
 	
 	private static final int MEDIAN_NUMBER = 23;
 	private static final int ENEMY_MAX = 10;
@@ -126,7 +127,7 @@ public class GameSimulation {
 			actionInList[i] = new Action();
 		}
 		for(int i=0; i<HISTORY_LENGTH; i++) {
-			history[i][HISTORY_TIMESTEP] = -1;
+			history[i][HISTORY_TIMESTEP_COL] = -1;
 		}
 
 	}
@@ -582,5 +583,25 @@ public class GameSimulation {
 
 	public int timestep() {
 		return timestep;
+	}
+	
+	//Compare our history with a peers' history. This is for testing 
+	public boolean compareHistory(GameSimulation gs, int age) {
+		for(int i=0; i<history.length; i++) {
+			int ts = history[i][HISTORY_TIMESTEP_COL];
+			
+			if((timestep - ts) < age) {
+				continue;
+			}
+			for(int j=0; j<gs.history.length; j++) {
+				if(gs.history[j][HISTORY_TIMESTEP_COL] == ts) {
+					if(!Arrays.equals(history[i], gs.history[j])) {
+						Log.d(TAG, "History is NOT equal! " + printState(history[i]) + "|" + printState(gs.history[j]));
+						return false;
+					}
+				}
+			}
+		}
+		return true;
 	}
 }
