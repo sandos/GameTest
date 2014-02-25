@@ -83,7 +83,7 @@ public class MainActivity extends Activity {
 		gameView.setRenderer(gr);
 		setContentView(gameView);
 		
-		sim = new GameSimulation(this);
+		sim = new GameSimulation(this, "");
 		gr.setSim(sim);
 		
 		soundPool = new SoundPool(1, AudioManager.STREAM_MUSIC, 0);

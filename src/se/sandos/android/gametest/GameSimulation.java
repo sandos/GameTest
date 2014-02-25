@@ -88,6 +88,8 @@ public class GameSimulation {
 	private int stepCheckCounter = 0;
 	
 	private MainActivity act;
+	
+	private String name;
 
 	class Action {
 		public int timestep = -1;
@@ -101,8 +103,10 @@ public class GameSimulation {
 	private int highestTimestepSeen;
 	private int highestSynchedTimestep;
 	
-	public GameSimulation(MainActivity activity)
+	public GameSimulation(MainActivity activity, String name)
 	{
+		this.name = name;
+		
 		act = activity;
 		
 		vX = 44000;
@@ -156,10 +160,11 @@ public class GameSimulation {
 					continue;
 				}
 				if(actionList[i].timestep < timestep) {
-					Log.v(TAG, "Action not on this timestep, internal: " + actionList[i].timestep + "|" + timestep);
+					Log.v(TAG, "Action not on this timestep, internal: " + actionList[i].timestep + " now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
 					restoreHistory(actionList[i]);
 				}
 				if(timestep == actionList[i].timestep) {
+					Log.v(TAG, "Applied (own) action at timestep " + timestep + "|" + highestSynchedTimestep + " >>" + name);
 					clicked = true;
 					actionList[i].applied = true;
 				}
@@ -173,12 +178,13 @@ public class GameSimulation {
 				if(actionInList[i].applied) {
 					continue;
 				}
+				//Only move back in time, only un-apply actions. This is a one-way street
 				if(actionInList[i].timestep < timestep) {
-					Log.v(TAG, "Action not on this timestep, external: " + actionInList[i].timestep + "|" + timestep + "|" + i);
+					Log.v(TAG, "Action not on this timestep, external: " + actionInList[i].timestep + "|" + i + " now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
 					restoreHistory(actionInList[i]);
 				}
 				if(timestep == actionInList[i].timestep) {
-					Log.v(TAG, "Applied action at timestep " + timestep);
+					Log.v(TAG, "Applied action at timestep " + timestep + "|" + highestSynchedTimestep + " >>" + name);
 					clicked = true;
 					actionInList[i].applied = true;
 				}
@@ -251,7 +257,7 @@ public class GameSimulation {
 			//XXX We just pray that we never end up in the "rewound" part of history, this might contain too old entries
 			//We should really just add a timestep field to the history itself
 			
-			Log.v(TAG, "Rewound to " + a.timestep + " from " + timestep + ", history says we are at " + ts);
+			Log.v(TAG, "Rewound to " + a.timestep + " from " + timestep + ", history says we are at " + ts + " >>" + name);
 			if(a.timestep < highestSynchedTimestep) {
 				Log.v(TAG, "WOOOAH! Why did we rewind to BEFORE a verified point in time ?!?!!?");
 			}
@@ -259,11 +265,30 @@ public class GameSimulation {
 				Log.v(TAG, "AAAAAAGH! We died!");
 			}
 
-			timestep = a.timestep;
 			a.applied = true;
 			//XXX - We need to "un-apply" all the pending actions that we went past going backwards in time
 			//so they get applied when we start stepping again
-
+			for(int i=0; i<actionList.length; i++) {
+				Action r = actionList[i];
+				if(r.applied) {
+					if(r.timestep <= timestep && r.timestep >= a.timestep) {
+						Log.v(TAG, "Unapplied action at " + r.timestep + " now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
+						r.applied = false;
+					}
+				}
+			}
+			for(int i=0; i<actionInList.length; i++) {
+				Action r = actionInList[i];
+				if(r.applied) {
+					if(r.timestep <= timestep && r.timestep >= a.timestep) {
+						Log.v(TAG, "Unapplied in-action at " + r.timestep + " now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
+						r.applied = false;
+					}
+				}
+			}
+			
+			timestep = a.timestep;
+			
 			if(highestTimestepSeen > timestep) {
 				highestTimestepSeen = timestep;
 			}
@@ -374,7 +399,7 @@ public class GameSimulation {
 						//XXX Conflict resolution here, if there is NEW input, we need to unset applied. 
 						//If its identical, just keep on going on
 					} else {
-						Log.v(TAG, "Adding new external action: " + peerTimestep + "|" + ts + "|[" + highestSynchedTimestep + "|" + timestep);
+						Log.v(TAG, "Adding new external action at " + ts + "|" + peerTimestep + " now: " + timestep + "|" + highestSynchedTimestep + " >" + name);
 						actionInList[freeSlot].timestep = ts;
 						actionInList[freeSlot].type = type;
 						actionInList[freeSlot].applied = false;
@@ -394,8 +419,8 @@ public class GameSimulation {
 			int offset = timestep - peerTimestep;
 			offset--;
 			if(offset < HISTORY_LENGTH && hash != history[offset][6] && history[offset][7] != -1) {
-				Log.v(TAG, "SyncHIST: " + peerTimestep + "|" + printState(history[offset]) + " [" + peer.getHostAddress() + "] " + highestSynchedTimestep);
-				Log.v(TAG, "Peervals: " + peerX +":" + history[offset][0] + "|" + peerY +":" + history[offset][1] + "|" + peervX + ":" + history[offset][2] + "|" + peervY +":" + history[offset][3]);
+				//Log.v(TAG, "SyncHIST: " + peerTimestep + "|" + printState(history[offset]) + " [" + peer.getHostAddress() + "] " + highestSynchedTimestep);
+				Log.v(TAG, "Synchist: " + peerX +":" + history[offset][0] + "|" + peerY +":" + history[offset][1] + "|" + peervX + ":" + history[offset][2] + "|" + peervY +":" + history[offset][3] + " ts:" +history[offset][HISTORY_TIMESTEP_COL] + " now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
 			} else {
 				if(highestSynchedTimestep < peerTimestep) {
 					highestSynchedTimestep = peerTimestep;
@@ -452,12 +477,7 @@ public class GameSimulation {
 
 	private String printState(int[] s)
 	{
-		return "XY: " + s[0] +":" + s[1] + " vXY: " + s[2] +":" + s[3] + " rVr: " + s[4] + "|" + s[5] + " h: " + s[6];
-	}
-	
-	private int computeHash(int[] s)
-	{
-		return s[0] ^ (s[0] >> 6) ^ (s[0] << 4) ^ s[1] ^ (s[1] >> 6) ^ (s[1] << 7) ^ s[2] ^ s[3] ^ s[4] ^ s[5]; 
+		return "XY: " + s[0] +":" + s[1] + " vXY: " + s[2] +":" + s[3] + " rVr: " + s[4] + "|" + s[5] + " h: " + s[6] + " TS:" + s[HISTORY_TIMESTEP_COL];
 	}
 	
 	public int hashCode()
@@ -565,12 +585,11 @@ public class GameSimulation {
 		cleanIncomingActionLists();
 		cleanActionOutList();
 		if(freeSlot != -1 && outfreeSlot != -1) {
-			//Log.v(TAG, "Got new internal action " + targetTS + "|" + timestep);
 			actionList[freeSlot].timestep = targetTS;
 			actionList[freeSlot].type     = 1;
 			actionList[freeSlot].applied  = false;
 			
-			Log.v(TAG, "Got new int/ext action " + targetTS + "|" + timestep + "|" + highestSynchedTimestep);
+			Log.v(TAG, "Generated action at " + targetTS + " now:" + timestep + "|" + highestSynchedTimestep + " >" + name);
 			actionOutList[outfreeSlot].timestep = targetTS;
 			actionOutList[outfreeSlot].type     = 1;
 			actionOutList[outfreeSlot].applied  = false;
@@ -585,8 +604,14 @@ public class GameSimulation {
 		return timestep;
 	}
 	
+	
+	public String toString()
+	{
+		return "GameSimulation [p: " + pX + "," + pY + " v:" + vX + "," + vY + " r:" + r + "," + vR +"]"; 
+	}
+	
 	//Compare our history with a peers' history. This is for testing 
-	public boolean compareHistory(GameSimulation gs, int age) {
+	public int compareHistory(GameSimulation gs, int age) {
 		for(int i=0; i<history.length; i++) {
 			int ts = history[i][HISTORY_TIMESTEP_COL];
 			
@@ -597,11 +622,11 @@ public class GameSimulation {
 				if(gs.history[j][HISTORY_TIMESTEP_COL] == ts) {
 					if(!Arrays.equals(history[i], gs.history[j])) {
 						Log.d(TAG, "History is NOT equal! " + printState(history[i]) + "|" + printState(gs.history[j]));
-						return false;
+						return history[i][HISTORY_TIMESTEP_COL];
 					}
 				}
 			}
 		}
-		return true;
+		return -1;
 	}
 }

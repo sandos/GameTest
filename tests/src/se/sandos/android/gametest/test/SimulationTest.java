@@ -60,8 +60,8 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 
 	public void testSimplex2Peers() throws IOException
 	{
-		GameSimulation sim1 = new GameSimulation(act);
-		GameSimulation sim2 = new GameSimulation(act);
+		GameSimulation sim1 = new GameSimulation(act, "sim1");
+		GameSimulation sim2 = new GameSimulation(act, "sim2");
 		
 		BinaryMessage binaryMessage = new BinaryMessage();
 		
@@ -74,8 +74,8 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 
 	public void testDuplex2Peers() throws UnknownHostException, IOException
 	{
-		GameSimulation sim1 = new GameSimulation(act);
-		GameSimulation sim2 = new GameSimulation(act);
+		GameSimulation sim1 = new GameSimulation(act, "sim1");
+		GameSimulation sim2 = new GameSimulation(act, "sim2");
 		
 		BinaryMessage binaryMessage = new BinaryMessage();
 		
@@ -93,8 +93,8 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	
 	public void testDelaySingleClick() throws UnknownHostException, IOException
 	{
-		GameSimulation sim1 = new GameSimulation(act);
-		GameSimulation sim2 = new GameSimulation(act);
+		GameSimulation sim1 = new GameSimulation(act, "sim1");
+		GameSimulation sim2 = new GameSimulation(act, "sim2");
 		
  		for(int x=0; x<ITERATIONS; x++) {
  			if(x == 10) {
@@ -111,15 +111,15 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	
 	public void testDelayComplexSimplex2Peers() throws UnknownHostException, IOException
 	{
-		GameSimulation sim1 = new GameSimulation(act);
-		GameSimulation sim2 = new GameSimulation(act);
+		GameSimulation sim1 = new GameSimulation(act, "sim1");
+		GameSimulation sim2 = new GameSimulation(act, "sim2");
 		
  		for(int x=0; x<ITERATIONS; x++) {
  			if(x % 8 == 2) {
  				sim1.clicked();
  			}
  			
- 			Assert.assertTrue(sim2.compareHistory(sim1, 10));
+ 			Assert.assertNotSame(-1, sim2.compareHistory(sim1, 10));
  			
  			try {
  				step(sim1, sim2, 5, x > 100, 1.0f);
@@ -132,15 +132,15 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	
 	public void testDelayLossComplexSimplex2Peers() throws UnknownHostException, IOException
 	{
-		GameSimulation sim1 = new GameSimulation(act);
-		GameSimulation sim2 = new GameSimulation(act);
+		GameSimulation sim1 = new GameSimulation(act, "sim1");
+		GameSimulation sim2 = new GameSimulation(act, "sim2");
 		
  		for(int x=0; x<ITERATIONS; x++) {
  			if(x % 3 == 2 && x < 300) {
  				sim1.clicked();
  			}
  			
- 			Assert.assertTrue(sim2.compareHistory(sim1, 10));
+ 			Assert.assertNotSame(-1, sim2.compareHistory(sim1, 10));
  			
  			if(x > ITERATIONS*0.9) {
  				Assert.assertTrue("Simulation drift: " + sim1.timestep() + "|" + sim2.timestep(), Math.abs(sim1.timestep() - sim2.timestep()) < 5);
@@ -154,6 +154,37 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
  			}
  		}
 	}
+	
+	public void testDelayLossComplexDuplex2Peers() throws UnknownHostException, IOException
+	{
+		GameSimulation sim1 = new GameSimulation(act, "sim1");
+		GameSimulation sim2 = new GameSimulation(act, "sim2");
+		
+ 		for(int x=0; x<ITERATIONS; x++) {
+ 			if(x < 300) {
+	 			if(x % 10 == 2) {
+	 				sim1.clicked();
+	 			}
+	 			if(x % 26 == 2) {
+	 				sim2.clicked();
+	 			}
+ 			}
+ 			
+ 			Assert.assertEquals("Histories diverge at " + sim1.timestep() + "|" + sim2.timestep(), -1, sim2.compareHistory(sim1, 30));
+ 			
+ 			if(x > ITERATIONS*0.9) {
+ 				Assert.assertTrue("Simulation drift: " + sim1.timestep() + "|" + sim2.timestep(), Math.abs(sim1.timestep() - sim2.timestep()) < 5);
+ 			}
+ 			
+ 			try {
+ 				step(sim1, sim2, 5, x > 600, 0.7f);
+ 			} catch(RuntimeException e) {
+ 				Log.d("test", "Failed at " + x);
+ 				throw e;
+ 			}
+ 		}
+	}
+
 	
 	private void step(GameSimulation sim1, GameSimulation sim2, int delay, boolean check, float packetLoss) throws IOException,
 			UnknownHostException {
@@ -186,7 +217,7 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 		if(check) {
 			try {
 				if(sim1.timestep() == sim2.timestep()) {
-					Assert.assertEquals(sim1.hashCode(), sim2.hashCode());
+					Assert.assertEquals("Simualations desynched at " + sim1.timestep() + " " + sim1 + "|" + sim2, sim1.hashCode(), sim2.hashCode());
 				}
 			} catch(AssertionFailedError e) {
 				//Run them anyway, we want to see the detailed info
