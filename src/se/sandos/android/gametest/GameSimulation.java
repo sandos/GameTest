@@ -98,7 +98,7 @@ public class GameSimulation {
 	}
 	
 	//Player input from network
-	private Action[] actionInList = new Action[ACTION_MAX];
+	private Action[] actionInList = new Action[ACTION_MAX*2];
 	
 	private int highestTimestepSeen;
 	private int highestSynchedTimestep;
@@ -162,8 +162,7 @@ public class GameSimulation {
 				if(actionList[i].timestep < timestep) {
 					Log.v(TAG, "Action not on this timestep, internal: " + actionList[i].timestep + " now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
 					restoreHistory(actionList[i]);
-				}
-				if(timestep == actionList[i].timestep) {
+				} else if(timestep == actionList[i].timestep) {
 					Log.v(TAG, "Applied (own) action at timestep " + timestep + "|" + highestSynchedTimestep + " >>" + name);
 					clicked = true;
 					actionList[i].applied = true;
@@ -330,6 +329,9 @@ public class GameSimulation {
 
 		if(peers && stepCheckCounter % 13 == 1)
 		{
+			if(avgOffset < -10) {
+				actualStep();
+			}
 			if(avgOffset < -1) {
 //				Log.v(TAG, "Running late, small step " + avgOffset);
 				actualStep();
@@ -405,7 +407,7 @@ public class GameSimulation {
 						actionInList[freeSlot].applied = false;
 					}
 				} else {
-					Log.v(TAG, "Discarded input, we will desynch");
+					Log.v(TAG, "Discarded input, we will desynch now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
 				}
 			}
 		}
@@ -605,9 +607,14 @@ public class GameSimulation {
 	}
 	
 	
-	public String toString()
-	{
-		return "GameSimulation [p: " + pX + "," + pY + " v:" + vX + "," + vY + " r:" + r + "," + vR +"]"; 
+	@Override
+	public String toString() {
+		return "GameSimulation [timestep=" + timestep + ", TAG=" + TAG
+				+ ", pX=" + pX + ", pY=" + pY + ", vX=" + vX + ", vY=" + vY
+				+ ", r=" + r + ", vR=" + vR + ", stepCheckCounter="
+				+ stepCheckCounter + ", name=" + name
+				+ ", highestTimestepSeen=" + highestTimestepSeen
+				+ ", highestSynchedTimestep=" + highestSynchedTimestep + "]";
 	}
 	
 	//Compare our history with a peers' history. This is for testing 
