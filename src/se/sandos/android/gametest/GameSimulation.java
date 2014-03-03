@@ -22,12 +22,14 @@ import android.util.Log;
  *
  */
 public class GameSimulation {
+	private static final int SHOTS_ALIVE_TIME = 300;
+
 	//Column number for history array
 	private static final int HISTORY_TIMESTEP_COL = 7;
 	
 	private static final int MEDIAN_NUMBER = 23;
 	private static final int ENEMY_MAX = 10;
-	private static final int SHOTS_MAX = 10;
+	public static final int SHOTS_MAX = 50;
 	private static final int HISTORY_LENGTH = 100;
 	private static final int STATE_SIZE = 8;
 	
@@ -52,21 +54,22 @@ public class GameSimulation {
 	
 	private Enemy[] enemies = new Enemy[ENEMY_MAX];
 
-	class Shot {
+	public static class Shot {
 		int x, y, vX, vY;
+		int aliveCounter;
 		boolean alive;
 		
 		public void serialize(BinaryMessage b) throws IOException
 		{
-			b.writeInt(x).writeInt(y).writeInt(vX).writeInt(vY);
+			b.writeInt(x).writeInt(y).writeInt(vX).writeInt(vY).writeInt(aliveCounter);
 			b.writeBoolean(alive);
 		}
 	}
 	
 	private Shot[] shots = new Shot[SHOTS_MAX];
 	
-	private static final int SHFT = 16;
-	private static final float SCALE = 1 << SHFT;
+	public static final int SHFT = 16;
+	public static final float SCALE = 1 << SHFT;
 	private static final int MIN_X = -10 << SHFT;
 	private static final int MIN_Y = -10 << SHFT;
 	private static final int MAX_X = 10 << SHFT;
@@ -94,6 +97,7 @@ public class GameSimulation {
 	public static class Action {
 		public int timestep = -1;
 		public int type;
+		public int x, y;
 		public boolean applied = false;
 	}
 	
@@ -154,6 +158,8 @@ public class GameSimulation {
 	private void actualStep()
 	{
 		boolean clicked = false;
+		boolean shot = false;
+		int shotVX = 0, shotVY = 0;
 		for(int i=0; i<actionList.length; i++) {
 			if(actionList[i].timestep <= timestep && actionList[i].timestep != -1) {
 				if(actionList[i].applied) {
@@ -165,7 +171,13 @@ public class GameSimulation {
 				}
 				if(timestep == actionList[i].timestep) {
 					Log.v(TAG, "Applied (own) action at timestep " + timestep + "|" + highestSynchedTimestep + " >>" + name);
-					clicked = true;
+					if(actionList[i].type == 1) {
+						clicked = true;
+					} else {
+						shot = true;
+						shotVX = actionList[i].x;
+						shotVY = actionList[i].y;
+					}
 					actionList[i].applied = true;
 				}
 			} else {
@@ -173,6 +185,7 @@ public class GameSimulation {
 			}
 		}
 
+		//XXX duplicated code
 		for(int i=0; i<actionInList.length; i++) {
 			if(actionInList[i].timestep <= timestep && actionInList[i].timestep != -1) {
 				if(actionInList[i].applied) {
@@ -185,7 +198,14 @@ public class GameSimulation {
 				}
 				if(timestep == actionInList[i].timestep) {
 					Log.v(TAG, "Applied action at timestep " + timestep + "|" + highestSynchedTimestep + " >>" + name);
-					clicked = true;
+					
+					if(actionInList[i].type == 1) {
+						clicked = true;
+					} else {
+						shot = true;
+						shotVX = actionInList[i].x;
+						shotVY = actionInList[i].y;
+					}
 					actionInList[i].applied = true;
 				}
 			} else {
@@ -193,15 +213,14 @@ public class GameSimulation {
 			}
 		}
 
-		
 		moveHistory();
-		oneStep(clicked);
+		oneStep(clicked, shot, shotVX, shotVY);
 		if(highestTimestepSeen < timestep) {
 			highestTimestepSeen = timestep;
 		}
 	}
 
-	private void oneStep(boolean clicked) {
+	private void oneStep(boolean clicked, boolean shot, int shotVX, int shotVY) {
 		boolean bounce = false;
 		
 		pX += vX;
@@ -225,6 +244,35 @@ public class GameSimulation {
 
 		if(bounce && avgOffset > -100 && avgOffset < 10) {
 			act.soundPool.play(act.clickSoundId, 1.0f, 1.0f, 1, 0, 1.0f);
+		}
+		
+		if(shot) {
+			int free = -1;
+			for(int i=0; i<SHOTS_MAX; i++) {
+				if(!shots[i].alive) {
+					free = i;
+				}
+			}
+			if(free != -1) {
+				shots[free].alive = true;
+				shots[free].x = pX;
+				shots[free].y = pY;
+				shots[free].vX = -shotVX;
+				shots[free].vY = -shotVY;
+				shots[free].aliveCounter = 0;
+			} else {
+				Log.v(TAG, "Shot memory is full now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
+			}
+		}
+		
+		for(int i=0; i<shots.length; i++) {
+			if(shots[i].alive) {
+				shots[i].x += shots[i].vX;
+				shots[i].y += shots[i].vY;
+				if(shots[i].aliveCounter++ > SHOTS_ALIVE_TIME) {
+					shots[i].alive = false;
+				}
+			}
 		}
 		
 		r += vR;
@@ -400,6 +448,8 @@ public class GameSimulation {
 			{
 				int ts = d.readInt();
 				int type = d.readInt();
+				int x = d.readInt();
+				int y = d.readInt();
 				int freeSlot = findUnusedslot(actionInList, ts);
 				if(freeSlot != -1) {
 					if(actionInList[freeSlot].applied == true && actionInList[freeSlot].timestep == ts) {
@@ -409,6 +459,8 @@ public class GameSimulation {
 						Log.v(TAG, "Adding new external action at " + ts + "|" + peerTimestep + " now: " + timestep + "|" + highestSynchedTimestep + " >" + name);
 						actionInList[freeSlot].timestep = ts;
 						actionInList[freeSlot].type = type;
+						actionInList[freeSlot].x = x;
+						actionInList[freeSlot].y = y;
 						actionInList[freeSlot].applied = false;
 					}
 				} else {
@@ -506,6 +558,8 @@ public class GameSimulation {
 //				Log.v(TAG, "Writing action to network: " + actionOutList[i].timestep + "|" + timestep + "| Index: " + i);
 				d.writeInt(actionOutList[i].timestep);
 				d.writeInt(actionOutList[i].type);
+				d.writeInt(actionOutList[i].x);
+				d.writeInt(actionOutList[i].y);
 			}
 		}
 		
@@ -585,6 +639,11 @@ public class GameSimulation {
 	
 	public void clicked()
 	{
+		clicked(0.0f, 0.0f);
+	}
+	
+	public void clicked(float x, float y)
+	{
 		int targetTS = timestep+1+INPUT_DELAY;
 		int freeSlot = findUnusedslot(actionList, targetTS);
 		int outfreeSlot = findUnusedslot(actionOutList, targetTS);
@@ -595,11 +654,21 @@ public class GameSimulation {
 			actionList[freeSlot].timestep = targetTS;
 			actionList[freeSlot].type     = 1;
 			actionList[freeSlot].applied  = false;
+
 			
 			Log.v(TAG, "Generated action at " + targetTS + " now:" + timestep + "|" + highestSynchedTimestep + " >" + name);
 			actionOutList[outfreeSlot].timestep = targetTS;
 			actionOutList[outfreeSlot].type     = 1;
 			actionOutList[outfreeSlot].applied  = false;
+			
+			if((x < -0.0001 || x > 0.0001f) && (y < -0.0001f || y > 0.0001f)) {
+				actionList[freeSlot].type = 2;
+				actionList[freeSlot].x = (int) ((x-0.5f)*SCALE);
+				actionList[freeSlot].y = (int) ((y-0.5f)*SCALE);
+				actionOutList[outfreeSlot].type = 2;
+				actionOutList[outfreeSlot].x = (int) ((x-0.5f)*SCALE);
+				actionOutList[outfreeSlot].y = (int) ((y-0.5f)*SCALE);
+			}
 		}
 		else
 		{
@@ -653,5 +722,10 @@ public class GameSimulation {
 			}
 		}
 		return -1;
+	}
+	
+	public Shot[] getShots()
+	{
+		return shots;
 	}
 }

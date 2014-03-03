@@ -33,6 +33,9 @@ public class GameView extends GLSurfaceView {
 		if(event.getActionMasked() == MotionEvent.ACTION_DOWN)
 		{
 			render.clicked = true;
+			
+			render.clickX = event.getX() / getWidth();
+			render.clickY = event.getY() / getHeight();
 		}
 		
 //		queueEvent(new Runnable() {

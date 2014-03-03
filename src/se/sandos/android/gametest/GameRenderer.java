@@ -3,10 +3,12 @@ package se.sandos.android.gametest;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import se.sandos.android.gametest.GameSimulation.Shot;
+import se.sandos.android.gametest.gl.GLShip;
+import se.sandos.android.gametest.gl.GLShot;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import android.util.Log;
 
 public class GameRenderer implements GLSurfaceView.Renderer {
 
@@ -25,8 +27,11 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 	GLShip ship2;
 	
 	private GameSimulation gs;
+	private GLShot[] shots = new GLShot[GameSimulation.SHOTS_MAX];
 	
 	public volatile boolean clicked  = false;
+	public float clickX;
+	public float clickY;
 	
 	@Override
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
@@ -35,6 +40,15 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 		
 	    // Set the camera position (View matrix)
 	    Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -3, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+	    
+	    for(int i=0; i<shots.length; i++) {
+	    	if(shots[i] == null) {
+	    		shots[i] = new GLShot();
+	    	}
+	    }
+	    
+	    GLES20.glEnable(GLES20.GL_BLEND);
+	    GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 	}
 
 	@Override
@@ -62,8 +76,19 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 		ship.draw(scratchMatrix);
 		ship2.draw(mMVPMatrix);
 		
-		if(clicked) {
-			gs.clicked();
+		Shot[] shs = gs.getShots();
+		for(int i=0; i<shs.length; i++) {
+			shots[i].alive = shs[i].alive;
+			if(shots[i].alive) {
+				shots[i].x = shs[i].x / GameSimulation.SCALE;
+				shots[i].y = shs[i].y / GameSimulation.SCALE;
+				
+				shots[i].draw(mMVPMatrix);
+			}
+		}
+		
+ 		if(clicked) {
+			gs.clicked(clickX, clickY);
 			clicked = false;
 		}
 		gs.step();

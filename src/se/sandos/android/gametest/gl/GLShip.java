@@ -1,4 +1,4 @@
-package se.sandos.android.gametest;
+package se.sandos.android.gametest.gl;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
