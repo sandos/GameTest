@@ -1,6 +1,8 @@
 package se.sandos.android.gametest.test;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayDeque;
@@ -15,6 +17,7 @@ import junit.framework.Assert;
 import junit.framework.AssertionFailedError;
 import se.sandos.android.gametest.BinaryMessage;
 import se.sandos.android.gametest.GameSimulation;
+import se.sandos.android.gametest.GameSimulation.Action;
 import se.sandos.android.gametest.MainActivity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -73,7 +76,7 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
  		for(int x=0; x<ITERATIONS; x++) {
 			sim1.clicked();
 
-			stepSynched(sim1, sim2, binaryMessage);
+			stepSynched(sim1, sim2, binaryMessage, true);
 		}
 	}
 
@@ -92,7 +95,7 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 				sim2.clicked();
 			}
 
-			stepSynched(sim1, sim2, binaryMessage);
+			stepSynched(sim1, sim2, binaryMessage, true);
 		}
 	}
 	
@@ -127,7 +130,7 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
  			Assert.assertEquals(-1, sim2.compareHistory(sim1, 10));
  			
  			try {
- 				step(sim1, sim2, 5, x > 100, 1.0f);
+ 				step(sim1, sim2, 5, false, 1.0f);
  			} catch(RuntimeException e) {
  				Log.d("test", "Failed at " + x);
  				throw e;
@@ -145,6 +148,10 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
  				sim1.clicked();
  			}
  			
+ 			if(!sim2.checkHistory()) {
+ 				Assert.fail("gaah");
+ 			}
+ 			
  			Assert.assertEquals(-1, sim2.compareHistory(sim1, 10));
  			
  			if(x > ITERATIONS*0.9) {
@@ -152,7 +159,7 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
  			}
  			
  			try {
- 				step(sim1, sim2, 5, x > 500, 0.5f);
+ 				step(sim1, sim2, 5, x > 500, 0.7f);
  			} catch(RuntimeException e) {
  				Log.d("test", "Failed at " + x);
  				throw e;
@@ -170,48 +177,44 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 		BinaryMessage temp = new BinaryMessage();
 		
 		sim1.clicked();
-		stepSynched(sim1, sim2, temp);
-		stepSynched(sim1, sim2, temp);
-		stepSynched(sim1, sim2, temp);
+		stepSynched(sim1, sim2, temp, false);
+		stepSynched(sim1, sim2, temp, false);
+		stepSynched(sim1, sim2, temp, false);
 		
 		sim1.clicked();
-		
-		stepSynched(sim1, sim2, temp);
-		
-		sim1.serialize(bm1);
-		bm2.parseFrom(bm1.getWritten());
-		sim2.absorb(bm2, addr);
-
-		//This packet is delayed...
-		sim2.serialize(bm2);
-
 		sim1.step();
+		sim1.step();
+		sim1.step();
+		sim1.step();
+		sim1.step();
+		
+		sim2.step();
+		sim2.step();
+		sim2.step();
+		sim2.step();
 		sim2.step();
 		
-		stepSynched(sim1, sim2, temp);
-		stepSynched(sim1, sim2, temp);
-		stepSynched(sim1, sim2, temp);
-		
-		bm1.parseFrom(bm2.getWritten());
-		sim1.absorb(bm1, addr);
-		
-		sim1.step();
-		sim2.step();
+		//We diverge here, network is desynched
+		Assert.assertEquals(6, sim1.compareHistory(sim2, 1));
 
-		sim1.step();
-		sim2.step();
+		stepSynched(sim1, sim2, temp, false);
+//		stepSynched(sim1, sim2, temp, false);
+//		stepSynched(sim1, sim2, temp, false);
+//		stepSynched(sim1, sim2, temp, false);
+//		stepSynched(sim1, sim2, temp, false);
+//		stepSynched(sim1, sim2, temp, false);
+//		stepSynched(sim1, sim2, temp, false);
+//		stepSynched(sim1, sim2, temp, false);
 
-		stepSynched(sim1, sim2, temp);
-		stepSynched(sim1, sim2, temp);
-
-		
+		Assert.assertEquals(-1, sim1.compareHistory(sim2, 2));
+		Assert.assertEquals("Simulator lagging due to input", 8,  sim2.timestep());
 	}
 	
 	public void testN() throws IOException
 	{
 		Map<GameSimulation, ArrayDeque<BinaryMessage>> sims = new HashMap<GameSimulation, ArrayDeque<BinaryMessage>>();
 		
-		for(int count=3; count<10; count++) {
+		for(int count=3; count<7; count++) {
 			sims.clear();
 			for(int j=0; j<count; j++) {
 				sims.put(new GameSimulation(act, "sim" + count), new ArrayDeque<BinaryMessage>(10));
@@ -349,7 +352,7 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	}
 	
 	//Simulate perfect network, no PL or delay
-	private void stepSynched(GameSimulation sim1, GameSimulation sim2, BinaryMessage binaryMessage) throws IOException,
+	private void stepSynched(GameSimulation sim1, GameSimulation sim2, BinaryMessage binaryMessage, boolean check) throws IOException,
 			UnknownHostException {
 		
 		binaryMessage.reset();
@@ -363,9 +366,67 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 		sim1.absorb(binaryMessage, addr);
 
 		//Run the assert on the old, so we get the debug log output when failing
-		Assert.assertEquals(sim1.hashCode(), sim2.hashCode());
-
+		if(sim1.timestep() == sim2.timestep() && check) {
+			Assert.assertEquals(sim1.hashCode(), sim2.hashCode());
+		}
+		
 		sim1.step();
 		sim2.step();
+	}
+	
+	//Unit tests
+	public void testMoveHistory() throws Exception
+	{
+		GameSimulation sim = new GameSimulation(act, "sim1");
+		
+		int[][] hist = new int[100][8];
+
+		for(int i=0; i<hist.length; i++) {
+			hist[i][7] = -1;
+		}
+		
+		Field h = GameSimulation.class.getDeclaredField("history");
+		h.setAccessible(true);
+		h.set(sim, hist);
+
+		Field timestep = GameSimulation.class.getDeclaredField("timestep");
+		timestep.setAccessible(true);
+
+		
+		Method move = GameSimulation.class.getDeclaredMethod("moveHistory", null);
+		move.setAccessible(true);
+		
+		Assert.assertEquals(true, sim.checkHistory());
+		
+		for(int i=0; i<hist.length; i++) {
+			hist[i][7] = 100-i;
+		}
+		
+		Assert.assertEquals(true, sim.checkHistory());
+
+		for(int i=0; i<hist.length; i++) {
+			hist[i][7] = 90-i;
+			if(hist[i][7] < 0) {
+				hist[i][7] = -1;
+			}
+		}
+		
+		Assert.assertEquals(true, sim.checkHistory());
+
+		for(int i=0; i<100; i++) {
+			timestep.setInt(sim, 91+i);	
+			move.invoke(sim, new Object[]{});
+			Assert.assertEquals("Failed check at iteration " + i, true, sim.checkHistory());
+		}
+		
+		Method rewind = GameSimulation.class.getDeclaredMethod("restoreHistory", new Class[]{Action.class});
+		rewind.setAccessible(true);
+		
+		Action a = new Action();
+		a.timestep = 160;
+		rewind.invoke(sim, new Object[]{a});
+
+		Assert.assertEquals("Failed check at iteration ", true, sim.checkHistory());
+		
 	}
 }

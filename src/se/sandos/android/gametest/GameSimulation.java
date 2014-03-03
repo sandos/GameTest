@@ -91,7 +91,7 @@ public class GameSimulation {
 	
 	private String name;
 
-	class Action {
+	public static class Action {
 		public int timestep = -1;
 		public int type;
 		public boolean applied = false;
@@ -162,7 +162,8 @@ public class GameSimulation {
 				if(actionList[i].timestep < timestep) {
 					Log.v(TAG, "Action not on this timestep, internal: " + actionList[i].timestep + " now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
 					restoreHistory(actionList[i]);
-				} else if(timestep == actionList[i].timestep) {
+				}
+				if(timestep == actionList[i].timestep) {
 					Log.v(TAG, "Applied (own) action at timestep " + timestep + "|" + highestSynchedTimestep + " >>" + name);
 					clicked = true;
 					actionList[i].applied = true;
@@ -192,11 +193,12 @@ public class GameSimulation {
 			}
 		}
 
+		
+		moveHistory();
+		oneStep(clicked);
 		if(highestTimestepSeen < timestep) {
 			highestTimestepSeen = timestep;
 		}
-		moveHistory();
-		oneStep(clicked);
 	}
 
 	private void oneStep(boolean clicked) {
@@ -251,7 +253,10 @@ public class GameSimulation {
 			//Move history itself
 			for(int i=0; i<HISTORY_LENGTH-offset-1; i++)
 			{
-				history[i] = history[i+offset+1];
+				System.arraycopy(history[i+offset+1], 0, history[i], 0, STATE_SIZE);
+			}
+			for(int i=HISTORY_LENGTH-offset-1; i<HISTORY_LENGTH; i++) {
+				history[i][HISTORY_TIMESTEP_COL] = -1;
 			}
 			//XXX We just pray that we never end up in the "rewound" part of history, this might contain too old entries
 			//We should really just add a timestep field to the history itself
@@ -286,11 +291,9 @@ public class GameSimulation {
 				}
 			}
 			
+			//We want to move one step ahead of our last step (as is normal) in this iteration, before returning from step()
+			highestTimestepSeen++;
 			timestep = a.timestep;
-			
-			if(highestTimestepSeen > timestep) {
-				highestTimestepSeen = timestep;
-			}
 			
 			return true;
 		}
@@ -307,10 +310,7 @@ public class GameSimulation {
 		//Move history
 		for(int i=HISTORY_LENGTH-2; i>=0; i--)
 		{
-			for(int j=0; j<STATE_SIZE; j++)
-			{
-				history[i+1][j] = history[i][j];
-			}
+			System.arraycopy(history[i], 0,  history[i+1], 0, STATE_SIZE);
 		}
 		
 		history[0][0] = pX;
@@ -353,6 +353,11 @@ public class GameSimulation {
 		}
 		else
 		{
+			actualStep();
+		}
+		
+		//Correct for rewinding history
+		while(highestTimestepSeen > timestep) {
 			actualStep();
 		}
 	}
@@ -609,12 +614,25 @@ public class GameSimulation {
 	
 	@Override
 	public String toString() {
-		return "GameSimulation [timestep=" + timestep + ", TAG=" + TAG
+		return "GameSimulation [timestep=" + timestep
 				+ ", pX=" + pX + ", pY=" + pY + ", vX=" + vX + ", vY=" + vY
-				+ ", r=" + r + ", vR=" + vR + ", stepCheckCounter="
-				+ stepCheckCounter + ", name=" + name
+				+ ", r=" + r + ", vR=" + vR + ", name=" + name
 				+ ", highestTimestepSeen=" + highestTimestepSeen
 				+ ", highestSynchedTimestep=" + highestSynchedTimestep + "]";
+	}
+	
+	
+	public boolean checkHistory()
+	{
+		for(int i=0; i<HISTORY_LENGTH-1; i++) {
+			
+			if(history[i][HISTORY_TIMESTEP_COL] != -1 && history[i+1][HISTORY_TIMESTEP_COL] != -1 && history[i+1][HISTORY_TIMESTEP_COL] != history[i][HISTORY_TIMESTEP_COL]-1) {
+				Log.v(TAG, "History incorrect at " + i + " :" + history[i+1][HISTORY_TIMESTEP_COL] + "|" + history[i][HISTORY_TIMESTEP_COL]);
+				return false;
+			}
+		}
+		
+		return true;
 	}
 	
 	//Compare our history with a peers' history. This is for testing 
@@ -622,7 +640,7 @@ public class GameSimulation {
 		for(int i=0; i<history.length; i++) {
 			int ts = history[i][HISTORY_TIMESTEP_COL];
 			
-			if((timestep - ts) < age) {
+			if(ts == -1 || (timestep - ts) < age) {
 				continue;
 			}
 			for(int j=0; j<gs.history.length; j++) {
