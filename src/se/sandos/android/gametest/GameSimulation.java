@@ -151,7 +151,7 @@ public class GameSimulation {
 	private static final int MIN_Y = -10 << SHFT;
 	private static final int MAX_X = 10 << SHFT;
 	private static final int MAX_Y = 10 << SHFT;
-	private static final int ACTION_MAX = 140;
+	private static final int ACTION_MAX = 92;
 	private static final int INPUT_DELAY = 2;
 	
 	//List for internal handling
