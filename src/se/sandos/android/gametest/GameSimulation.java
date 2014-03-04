@@ -113,9 +113,9 @@ public class GameSimulation {
 		
 		act = activity;
 		
-		vX = 44000;
-		vY = 21200;
-		vR = 700000;
+		vX = 14000;
+		vY = 11200;
+		vR = 70000;
 		
 		for(int i=0; i<ENEMY_MAX; i++)
 		{
@@ -234,12 +234,14 @@ public class GameSimulation {
 			if(clicked) {
 				Log.v(TAG, "User action taken here " + timestep);
 			}
-		} 
+			vX = (vX * 60000) >> SHFT;
+ 		} 
 		
 		if(pY >= MAX_Y || pY <= MIN_Y) {
 			pY -= vY;
 			vY = -vY;
 			bounce = true;
+			vY = (vY * 60000) >> SHFT;
 		} 
 
 		if(bounce && avgOffset > -100 && avgOffset < 10) {
@@ -255,8 +257,8 @@ public class GameSimulation {
 			}
 			if(free != -1) {
 				shots[free].alive = true;
-				shots[free].x = pX;
-				shots[free].y = pY;
+				shots[free].x = pX*10;
+				shots[free].y = pY*10;
 				shots[free].vX = -shotVX;
 				shots[free].vY = -shotVY;
 				shots[free].aliveCounter = 0;
