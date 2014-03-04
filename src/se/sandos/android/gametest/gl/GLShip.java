@@ -52,8 +52,8 @@ public class GLShip {
 //		    "     vec4(.90, .90, 1.0) :" + 
 //		    "     vec4(.20, .20, .10);" + 
 			"  gl_FragColor = vColor;" +
-			"  gl_FragColor.r = pos.x;" +
-			"  gl_FragColor.g = pos.y;" +
+			"  gl_FragColor.r = sin(gl_FragCoord.x/10.0)*0.5+0.5;" +
+			"  gl_FragColor.g = cos(gl_FragCoord.y/30.0)*0.5+0.5;" +
 		    "}";
 	
 	static final int COORDS_PER_VERTEX = 3;
@@ -102,9 +102,6 @@ public class GLShip {
 		Matrix.translateM(mvpMatrix, 0, x, y, 0.0f);
 	    Matrix.multiplyMM(scratchMatrix, 0, mvpMatrix, 0, rotationMatrix, 0);
 
-
-		
-		
 	    // Add program to OpenGL ES environment
 	    GLES20.glUseProgram(mProgram);
 
@@ -140,7 +137,6 @@ public class GLShip {
 
 	
 	public static int loadShader(int type, String shaderCode){
-
 	    // create a vertex shader type (GLES20.GL_VERTEX_SHADER)
 	    // or a fragment shader type (GLES20.GL_FRAGMENT_SHADER)
 	    int shader = GLES20.glCreateShader(type);
