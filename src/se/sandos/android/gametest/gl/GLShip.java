@@ -19,6 +19,7 @@ public class GLShip {
 	
 	private float[] rotationMatrix = new float[16];
 	private float[] scratchMatrix = new float[16];
+	private float[] scratchMatrix2 = new float[16];
 	
 	private float x;
 	private float y;
@@ -94,13 +95,15 @@ public class GLShip {
 
 	}
 	
-	public void draw(float[] mvpMatrix) {
+	public void draw(float[] m) {
+		System.arraycopy(m, 0, scratchMatrix2, 0, 16);
+		
 	    Matrix.setRotateM(rotationMatrix, 0, angle, 0, 0, -1.0f);
 //	    Matrix.setRotateM(rotationMatrix, 0, angle, 0, 0.0f, 1.0f);
 		
-		Matrix.scaleM(mvpMatrix, 0, 0.1f, 0.1f, 0.1f);
-		Matrix.translateM(mvpMatrix, 0, x, y, 0.0f);
-	    Matrix.multiplyMM(scratchMatrix, 0, mvpMatrix, 0, rotationMatrix, 0);
+		Matrix.scaleM(scratchMatrix2, 0, 0.1f, 0.1f, 0.1f);
+		Matrix.translateM(scratchMatrix2, 0, x, y, 0.0f);
+	    Matrix.multiplyMM(scratchMatrix, 0, scratchMatrix2, 0, rotationMatrix, 0);
 
 	    // Add program to OpenGL ES environment
 	    GLES20.glUseProgram(mProgram);

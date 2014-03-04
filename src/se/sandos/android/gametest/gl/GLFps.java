@@ -10,6 +10,7 @@ import javax.microedition.khronos.opengles.GL10;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import android.opengl.Matrix;
@@ -29,11 +30,14 @@ public class GLFps {
 	
 	public float x = 0.0f;
 	public float y = 0.0f;
-	public float angle;
+	public float angle = 180;
 	
 	public boolean alive;
 	
+	private int fps;
+	
 	int[] textures = new int[100];
+	private int counter;
 
 	
 	 private final String vertexShaderCode = 
@@ -50,7 +54,7 @@ public class GLFps {
 		 "varying highp vec2 textureCoordinate;" +
 		 "uniform sampler2D sampler;"+
 		 "void main() { "+
-		 "    gl_FragColor = texture2D(sampler, textureCoordinate);" +     
+		 "    gl_FragColor = texture2D(sampler, textureCoordinate);" +
 		 "}";
 	 
 	static final int COORDS_PER_VERTEX = 3;
@@ -72,40 +76,12 @@ public class GLFps {
 	private short drawOrder[] = { 0, 1, 2, 0, 2, 3 }; // order to draw vertices
 	
 	public GLFps() {
-		// Create an empty, mutable bitmap
-		Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888);
-		// get a canvas to paint over the bitmap
-		Canvas canvas = new Canvas(bitmap);
-		bitmap.eraseColor(0);
-
-		// Draw the text
-		Paint textPaint = new Paint();
-		textPaint.setTextSize(42);
-		textPaint.setAntiAlias(true);
-		textPaint.setARGB(0xff, 0xff, 0xff, 0xff);
-		// draw the text centered
-		canvas.drawText("Hello World", 16,112, textPaint);
-
 		//Generate one texture pointer...
-		GLES20.glGenTextures(1, textures, 0);
-		//...and bind it to our array
-		GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-		GLES20.glBindTexture(GL10.GL_TEXTURE_2D, textures[0]);
+		GLES20.glGenTextures(100, textures, 0);
 
-		//Create Nearest Filtered Texture
-		GLES20.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_NEAREST);
-		GLES20.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR);
-
-		//Different possible texture parameters, e.g. GL10.GL_CLAMP_TO_EDGE
-		GLES20.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_S, GL10.GL_REPEAT);
-		GLES20.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_T, GL10.GL_REPEAT);
-
-		//Use the Android GLUtils to specify a two-dimensional texture image from our bitmap
-		GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0);
-
-		//Clean up
-		bitmap.recycle();
-		
+		for(int i=0; i<100; i++) {
+			drawText(i);
+		}
 		
 		ByteBuffer bb = ByteBuffer.allocateDirect(triangleCoords.length * 4);
 		bb.order(ByteOrder.nativeOrder());
@@ -138,12 +114,54 @@ public class GLFps {
 
 	}
 	
+	public void setFps(int f)
+	{
+		fps = f;
+	}
+
+	public void drawText(int i) {
+		// Create an empty, mutable bitmap
+		Bitmap bitmap = Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888);
+		// get a canvas to paint over the bitmap
+		Canvas canvas = new Canvas(bitmap);
+		bitmap.eraseColor(0);
+
+		// Draw the text
+		Typeface tf = Typeface.create("Arial",Typeface.BOLD);
+		Paint textPaint = new Paint();
+		textPaint.setTypeface(tf);
+		textPaint.setTextSize(98);
+		textPaint.setAntiAlias(true);
+		textPaint.setARGB(0x7f, 0xff, 0xff, 0xff);
+		// draw the text centered
+		canvas.drawText("" + i, 16,112, textPaint);
+
+		//...and bind it to our array
+		GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+		GLES20.glBindTexture(GL10.GL_TEXTURE_2D, textures[i]);
+
+		//Create Nearest Filtered Texture
+		GLES20.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_NEAREST);
+		GLES20.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR);
+
+		//Different possible texture parameters, e.g. GL10.GL_CLAMP_TO_EDGE
+		GLES20.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_S, GL10.GL_REPEAT);
+		GLES20.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_T, GL10.GL_REPEAT);
+
+		//Use the Android GLUtils to specify a two-dimensional texture image from our bitmap
+		GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0);
+
+		//Clean up
+		bitmap.recycle();
+	}
+	
 	public void draw(float[] m) {
 		System.arraycopy(m, 0, mvpMatrix, 0, 16);
 	    Matrix.setRotateM(rotationMatrix, 0, angle, 0, 0, 1.0f);
 		
-		Matrix.scaleM(mvpMatrix, 0, 1.0f, 1.0f, 1.0f);
-		Matrix.translateM(mvpMatrix, 0, x, y, 0.0f);
+	    counter++;
+		Matrix.translateM(mvpMatrix, 0, .1f, -.61f + (.3f*(counter % 6)), 0.0f);
+		Matrix.scaleM(mvpMatrix, 0, .5f, .2f, 1.0f);
 	    Matrix.multiplyMM(scratchMatrix, 0, mvpMatrix, 0, rotationMatrix, 0);
 
 	    // Add program to OpenGL ES environment
@@ -163,6 +181,9 @@ public class GLFps {
 	                                 GLES20.GL_FLOAT, false,
 	                                 COORDS_PER_VERTEX*4, vertexBuffer);
 
+		GLES20.glBindTexture(GL10.GL_TEXTURE_2D, textures[Math.min(99, fps)]);
+
+	    
 	    int mTexCoordHandle = GLES20.glGetAttribLocation(mProgram, "inputTextureCoordinate");
 	    GLES20.glEnableVertexAttribArray(mTexCoordHandle);
 	    GLES20.glVertexAttribPointer(mTexCoordHandle, 2,

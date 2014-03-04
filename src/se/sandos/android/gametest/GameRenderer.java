@@ -24,7 +24,6 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 	
 	private float ratio;
 	GLShip ship;
-	GLShip ship2;
 	GLFps fps;
 	
 	private GameSimulation gs;
@@ -37,7 +36,6 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 	@Override
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
 		ship = new GLShip();
-		ship2 = new GLShip();
 		fps = new GLFps();
 		
 	    // Set the camera position (View matrix)
@@ -76,7 +74,6 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 	    ship.setAngle(gs.r());
 	    copyArray(scratchMatrix, mMVPMatrix);
 		ship.draw(scratchMatrix);
-		ship2.draw(mMVPMatrix);
 		
 		Shot[] shs = gs.getShots();
 		for(int i=0; i<shs.length; i++) {
@@ -89,18 +86,25 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 			}
 		}
 		
-		fps.draw(mMVPMatrix);
-		
  		if(clicked) {
 			gs.clicked(clickX, clickY);
 			clicked = false;
 		}
+
+		long now = System.nanoTime();
+ 		fps.setFps((int) (1.0/((now - lastFrame)/1000000000.0f)));
+		fps.draw(mMVPMatrix);
+		lastFrame = now;
+
+ 		
 		gs.step();
-//		long now = System.nanoTime();
-//		Log.v("majs", "FPS: " + 1.0/((now - lastFrame)/1000000000.0f));
-//		lastFrame = now;
 	}
 
+	public void clicked(float x, float y)
+	{
+		gs.clicked(x, y);
+	}
+	
 	private void copyArray(float[] to, float[] from)
 	{
 		to[0] = from[0];
@@ -121,10 +125,6 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 		to[15] = from[15];
 	}
 	
-	public void setColor(float r, float g, float b) {
-		ship2.setPos(-r*20+10, -g*20+10);
-	}
-
 	public void setSim(GameSimulation sim) {
 		gs = sim;
 	}

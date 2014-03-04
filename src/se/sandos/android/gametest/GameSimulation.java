@@ -22,14 +22,14 @@ import android.util.Log;
  *
  */
 public class GameSimulation {
-	private static final int SHOTS_ALIVE_TIME = 300;
+	private static final int SHOTS_ALIVE_TIME = 90;
 
 	//Column number for history array
 	private static final int HISTORY_TIMESTEP_COL = 7;
 	
 	private static final int MEDIAN_NUMBER = 23;
 	private static final int ENEMY_MAX = 10;
-	public static final int SHOTS_MAX = 50;
+	public static final int SHOTS_MAX = 150;
 	private static final int HISTORY_LENGTH = 100;
 	private static final int STATE_SIZE = 8;
 	
@@ -74,7 +74,7 @@ public class GameSimulation {
 	private static final int MIN_Y = -10 << SHFT;
 	private static final int MAX_X = 10 << SHFT;
 	private static final int MAX_Y = 10 << SHFT;
-	private static final int ACTION_MAX = 40;
+	private static final int ACTION_MAX = 140;
 	private static final int INPUT_DELAY = 2;
 	
 	//List for internal handling
@@ -257,8 +257,8 @@ public class GameSimulation {
 			}
 			if(free != -1) {
 				shots[free].alive = true;
-				shots[free].x = pX*10;
-				shots[free].y = pY*10;
+				shots[free].x = pX;
+				shots[free].y = pY;
 				shots[free].vX = -shotVX;
 				shots[free].vY = -shotVY;
 				shots[free].aliveCounter = 0;
@@ -507,13 +507,13 @@ public class GameSimulation {
 
 	private void cleanIncomingActionLists() {
 		for(int i=0;i<actionInList.length; i++) {
-			if((timestep - actionInList[i].timestep) > HISTORY_LENGTH*2) {
+			if((timestep - actionInList[i].timestep) > HISTORY_LENGTH*1.5) {
 				//Clean this item
 				actionInList[i].timestep = -1;
 			}
 		}
 		for(int i=0;i<actionList.length; i++) {
-			if((timestep - actionList[i].timestep) > HISTORY_LENGTH*2) {
+			if((timestep - actionList[i].timestep) > HISTORY_LENGTH*1.5) {
 				//Clean this item
 				actionList[i].timestep = -1;
 			}
@@ -656,7 +656,6 @@ public class GameSimulation {
 			actionList[freeSlot].timestep = targetTS;
 			actionList[freeSlot].type     = 1;
 			actionList[freeSlot].applied  = false;
-
 			
 			Log.v(TAG, "Generated action at " + targetTS + " now:" + timestep + "|" + highestSynchedTimestep + " >" + name);
 			actionOutList[outfreeSlot].timestep = targetTS;
