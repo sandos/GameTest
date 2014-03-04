@@ -15,7 +15,6 @@ public class GLShot {
 
 	private int mProgram;
 	private int mPositionHandle;
-	private int mColorHandle;
 	private int mMVPMatrixHandle;
 	
 	private float[] rotationMatrix = new float[16];
@@ -99,8 +98,7 @@ public class GLShot {
 	
 	public void draw(float[] m) {
 		System.arraycopy(m, 0, mvpMatrix, 0, 16);
-	    Matrix.setRotateM(rotationMatrix, 0, angle, 0, 0, -1.0f);
-//	    Matrix.setRotateM(rotationMatrix, 0, angle, 0, 0.0f, 1.0f);
+	    Matrix.setRotateM(rotationMatrix, 0, angle, 0, 0, 1.0f);
 		
 		Matrix.scaleM(mvpMatrix, 0, 0.1f, 0.1f, 0.1f);
 		Matrix.translateM(mvpMatrix, 0, x, y, 0.0f);
