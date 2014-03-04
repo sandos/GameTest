@@ -12,7 +12,7 @@ public class BinaryMessage {
 	private byte[] readBuf;
 	private ByteBuffer readBuffer;
 	
-	private static final int DEFAULT_BUFFER_SIZE = 1024;
+	private static final int DEFAULT_BUFFER_SIZE = 1500;
 	
 	public BinaryMessage()
 	{
