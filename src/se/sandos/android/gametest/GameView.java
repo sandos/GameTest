@@ -35,30 +35,12 @@ public class GameView extends GLSurfaceView {
 
 	public boolean onTouchEvent(final MotionEvent event) {
 		int num = event.getPointerCount();
-		Log.v(TAG, "Got " + num + " pointers");
 		counter++;
-//		PointerCoords pc = new PointerCoords();
 		for(int i=0; i<num; i++) {
-//			if(event.getActionMasked() == MotionEvent.ACTION_DOWN || event.getActionMasked() == MotionEvent.ACTION_MOVE)
-			{
-//				render.clicked = true;
-				
-//				event.getPointerCoords(i, pc);
-//				render.clickX = event.getX(i) / getWidth();
-//				render.clickY = event.getY(i) / getHeight();
-				if(counter % num == 0) {
-					render.clicked(event.getX(i) / getWidth(), event.getY(i) / getHeight());
-				}
-//				render.clickX = pc.x / getWidth();
-//				render.clickY = pc.y / getHeight();
+			if(counter % num == i) {
+				render.clicked(event.getX(i) / getWidth(), event.getY(i) / getHeight());
 			}
 		}
-//		queueEvent(new Runnable() {
-//			public void run() {
-//				render.setColor(event.getX() / getWidth(), event.getY()
-//						/ getHeight(), 0.0f);
-//			}
-//		});
 		return true;
 	}
 
