@@ -4,6 +4,7 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import se.sandos.android.gametest.GameSimulation.Shot;
+import se.sandos.android.gametest.gl.GLFps;
 import se.sandos.android.gametest.gl.GLShip;
 import se.sandos.android.gametest.gl.GLShot;
 import android.opengl.GLES20;
@@ -19,12 +20,12 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 	final private float[] mProjMatrix		= new float[16];
 	final private float[] mViewMatrix		= new float[16];
 	final private float[] mMVPMatrix 		= new float[16];
-	final private float[] rotationMatrix 	= new float[16];
 	final private float[] scratchMatrix 	= new float[16];
 	
 	private float ratio;
 	GLShip ship;
 	GLShip ship2;
+	GLFps fps;
 	
 	private GameSimulation gs;
 	private GLShot[] shots = new GLShot[GameSimulation.SHOTS_MAX];
@@ -37,6 +38,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
 		ship = new GLShip();
 		ship2 = new GLShip();
+		fps = new GLFps();
 		
 	    // Set the camera position (View matrix)
 	    Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -3, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
@@ -87,6 +89,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 			}
 		}
 		
+		fps.draw(mMVPMatrix);
+		
  		if(clicked) {
 			gs.clicked(clickX, clickY);
 			clicked = false;
@@ -118,16 +122,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 	}
 	
 	public void setColor(float r, float g, float b) {
-		mRed = r;
-		mGreen = g;
-		mBlue = b;
-		
 		ship2.setPos(-r*20+10, -g*20+10);
 	}
-
-	private float mRed;
-	private float mGreen;
-	private float mBlue;
 
 	public void setSim(GameSimulation sim) {
 		gs = sim;
