@@ -41,7 +41,7 @@ public class GameSimulation {
 	private int pX, pY, vX, vY, r, vR;
 	private int[][] history = new int[HISTORY_LENGTH][STATE_SIZE];
 	
-	class Enemy {
+	public static class Enemy {
 		int x, y, vX, vY, r, vR;
 		boolean alive;
 		
@@ -49,6 +49,46 @@ public class GameSimulation {
 		{
 			b.writeInt(x).writeInt(y).writeInt(vX).writeInt(vY).writeInt(r).writeInt(vR);
 			b.writeBoolean(alive);
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + (alive ? 1231 : 1237);
+			result = prime * result + r;
+			result = prime * result + vR;
+			result = prime * result + vX;
+			result = prime * result + vY;
+			result = prime * result + x;
+			result = prime * result + y;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Enemy other = (Enemy) obj;
+			if (alive != other.alive)
+				return false;
+			if (r != other.r)
+				return false;
+			if (vR != other.vR)
+				return false;
+			if (vX != other.vX)
+				return false;
+			if (vY != other.vY)
+				return false;
+			if (x != other.x)
+				return false;
+			if (y != other.y)
+				return false;
+			return true;
 		}
 	}
 	
@@ -63,6 +103,43 @@ public class GameSimulation {
 		{
 			b.writeInt(x).writeInt(y).writeInt(vX).writeInt(vY).writeInt(aliveCounter);
 			b.writeBoolean(alive);
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + (alive ? 1231 : 1237);
+			result = prime * result + aliveCounter;
+			result = prime * result + vX;
+			result = prime * result + vY;
+			result = prime * result + x;
+			result = prime * result + y;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Shot other = (Shot) obj;
+			if (alive != other.alive)
+				return false;
+			if (aliveCounter != other.aliveCounter)
+				return false;
+			if (vX != other.vX)
+				return false;
+			if (vY != other.vY)
+				return false;
+			if (x != other.x)
+				return false;
+			if (y != other.y)
+				return false;
+			return true;
 		}
 	}
 	
@@ -543,7 +620,7 @@ public class GameSimulation {
 	
 	public int hashCode()
 	{
-		return pX ^ (pX >> 6) ^ (pX << 4) ^ pY ^ (pY >> 6) ^ (pY << 7) ^ vX ^ vY ^ r ^ vR;
+		return pX ^ pY ^ vX ^ vY ^ r ^ vR ^ Arrays.deepHashCode(shots) ^ Arrays.hashCode(enemies);
 	}
 	
 	public synchronized void serialize(BinaryMessage d) throws IOException {
