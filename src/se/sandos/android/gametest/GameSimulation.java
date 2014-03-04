@@ -434,7 +434,7 @@ public class GameSimulation {
 		medians.clear();
 		for(InetAddress p : timeOffsets.keySet())
 		{
-			medians.add(medianForPeer(peer));
+			medians.add(medianForPeer(p));
 		}
 		Collections.sort(medians);
 		avgOffset = medians.get(medians.size()/2);
