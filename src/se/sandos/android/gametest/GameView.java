@@ -2,7 +2,6 @@ package se.sandos.android.gametest;
 
 import android.content.Context;
 import android.opengl.GLSurfaceView;
-import android.opengl.GLSurfaceView.Renderer;
 import android.view.MotionEvent;
 
 public class GameView extends GLSurfaceView {
