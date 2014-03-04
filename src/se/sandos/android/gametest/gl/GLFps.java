@@ -37,25 +37,21 @@ public class GLFps {
 
 	
 	 private final String vertexShaderCode = 
-			 "attribute vec4 vPosition;" +
-			 "attribute vec2 inputTextureCoordinate;"+
-			 "uniform mat4 uMVPMatrix;"+
-			 "varying vec2 textureCoordinate;"+
-			 "void main() {" +
-			 "  gl_Position = uMVPMatrix*vPosition;" +
-			 "  textureCoordinate = inputTextureCoordinate;" +
-	 		 "}";
+		 "attribute vec4 vPosition;" +
+		 "attribute vec2 inputTextureCoordinate;"+
+		 "uniform mat4 uMVPMatrix;"+
+		 "varying vec2 textureCoordinate;"+
+		 "void main() {" +
+		 "  gl_Position = uMVPMatrix*vPosition;" +
+		 "  textureCoordinate = inputTextureCoordinate;" +
+ 		 "}";
 
 	 private final String fragmentShaderCode =
-	 "varying highp vec2 textureCoordinate;" +
-//	 "const highp vec2 center = vec2(0.5, 0.5);" +
-//	 "const highp float radius = 0.5;" +
-	 "uniform sampler2D sampler;"+
-	 "void main() { "+
-//	 "    highp float distanceFromCenter = distance(center, textureCoordinate);" +
-//	 "    lowp float checkForPresenceWithinCircle = step(distanceFromCenter, radius);" +
-	 "    gl_FragColor = texture2D(sampler, textureCoordinate);" +     
-	 "}";
+		 "varying highp vec2 textureCoordinate;" +
+		 "uniform sampler2D sampler;"+
+		 "void main() { "+
+		 "    gl_FragColor = texture2D(sampler, textureCoordinate);" +     
+		 "}";
 	 
 	static final int COORDS_PER_VERTEX = 3;
 	static float triangleCoords[] = { // in counterclockwise order:
@@ -84,15 +80,16 @@ public class GLFps {
 
 		// Draw the text
 		Paint textPaint = new Paint();
-		textPaint.setTextSize(32);
+		textPaint.setTextSize(42);
 		textPaint.setAntiAlias(true);
-		textPaint.setARGB(0xff, 0x00, 0x00, 0x00);
+		textPaint.setARGB(0xff, 0xff, 0xff, 0xff);
 		// draw the text centered
 		canvas.drawText("Hello World", 16,112, textPaint);
 
 		//Generate one texture pointer...
 		GLES20.glGenTextures(1, textures, 0);
 		//...and bind it to our array
+		GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
 		GLES20.glBindTexture(GL10.GL_TEXTURE_2D, textures[0]);
 
 		//Create Nearest Filtered Texture
@@ -145,7 +142,7 @@ public class GLFps {
 		System.arraycopy(m, 0, mvpMatrix, 0, 16);
 	    Matrix.setRotateM(rotationMatrix, 0, angle, 0, 0, 1.0f);
 		
-		Matrix.scaleM(mvpMatrix, 0, 0.1f, 0.1f, 0.1f);
+		Matrix.scaleM(mvpMatrix, 0, 1.0f, 1.0f, 1.0f);
 		Matrix.translateM(mvpMatrix, 0, x, y, 0.0f);
 	    Matrix.multiplyMM(scratchMatrix, 0, mvpMatrix, 0, rotationMatrix, 0);
 
@@ -160,7 +157,6 @@ public class GLFps {
 
 	    int handle = GLES20.glGetAttribLocation(mProgram, "position");
 	    GLES20.glUniform3f(handle, x, y, 0.0f);
-
 	    
 	    // Prepare the triangle coordinate data
 	    GLES20.glVertexAttribPointer(mPositionHandle, COORDS_PER_VERTEX,
