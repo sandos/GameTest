@@ -43,8 +43,9 @@ public class GLShot {
 	 "const highp float radius = 0.5;" +
 	 "void main() { "+
 	 "    highp float distanceFromCenter = distance(center, textureCoordinate);" +
-	 "    lowp float checkForPresenceWithinCircle = 1.0-smoothstep(0.33, 0.5, distanceFromCenter);" +
-	 "    gl_FragColor = vec4(1.0, 0.0, 0.0, 0.5) * checkForPresenceWithinCircle;" +     
+	 "    lowp float checkForPresenceWithinCircle = 1.0-smoothstep(0.02, 0.5, distanceFromCenter);" +
+	 "    lowp float c2 = 1.0-smoothstep(0.01, 0.02, distanceFromCenter);" +
+	 "    gl_FragColor = vec4(1.0, 0.0, 1.0, 0.06) * checkForPresenceWithinCircle + vec4(1.0, 1.0, 1.0, 0.7) * c2;" +     
 	 "}";
 	 
 	static final int COORDS_PER_VERTEX = 3;
@@ -101,7 +102,7 @@ public class GLShot {
 	    Matrix.setRotateM(rotationMatrix, 0, angle, 0, 0, 1.0f);
 		
 		Matrix.translateM(mvpMatrix, 0, x/10.0f, y/10.0f, 0.0f);
-		Matrix.scaleM(mvpMatrix, 0, 0.04f, 0.04f, 0.1f);
+		Matrix.scaleM(mvpMatrix, 0, 0.3f, 0.3f, 0.1f);
 	    Matrix.multiplyMM(scratchMatrix, 0, mvpMatrix, 0, rotationMatrix, 0);
 
 
