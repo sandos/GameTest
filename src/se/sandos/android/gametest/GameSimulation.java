@@ -151,7 +151,7 @@ public class GameSimulation {
 	private static final int MIN_Y = -10 << SHFT;
 	private static final int MAX_X = 10 << SHFT;
 	private static final int MAX_Y = 10 << SHFT;
-	private static final int ACTION_MAX = 92;
+	private static final int ACTION_MAX = 86;
 	private static final int INPUT_DELAY = 2;
 	
 	//List for internal handling
@@ -668,7 +668,7 @@ public class GameSimulation {
 			if(actionOutList[i].timestep != -1) {
 				//We want this to be lower than for cleaning incoming items, otherwise the "client"/"receiver" will forget
 				//actions and try to re-play them
-				if(timestep - actionOutList[i].timestep > HISTORY_LENGTH) {
+				if(timestep - actionOutList[i].timestep > HISTORY_LENGTH/2) {
 					actionOutList[i].timestep = -1;
 //					Log.v(TAG, "Clearing old out-action at index " + i + "|" + timestep);
 				}
