@@ -162,6 +162,7 @@ public class GameSimulation {
 	//Synch data, never sent out!
 	private Map<InetAddress, ArrayDeque<Integer>> timeOffsets = new HashMap <InetAddress, ArrayDeque<Integer>>();
 	private List<Integer> medians = new ArrayList<Integer>(10);
+	private final List<Integer> sorted = new LinkedList<Integer>();
 	private int avgOffset = 0;
 	private boolean peers = false;
 	//This is used to control speeding up/down of timestep
@@ -606,7 +607,8 @@ public class GameSimulation {
 		
 		final ArrayDeque<Integer> deque = timeOffsets.get(peer);
 		
-		List<Integer> sorted = new LinkedList<Integer>(deque);
+		sorted.clear();
+		sorted.addAll(deque);
 		Collections.sort(sorted);
 
 		Integer median = sorted.get(sorted.size()/2);
@@ -668,7 +670,7 @@ public class GameSimulation {
 			if(actionOutList[i].timestep != -1) {
 				//We want this to be lower than for cleaning incoming items, otherwise the "client"/"receiver" will forget
 				//actions and try to re-play them
-				if(timestep - actionOutList[i].timestep > HISTORY_LENGTH/2) {
+				if(timestep - actionOutList[i].timestep > 10) {
 					actionOutList[i].timestep = -1;
 //					Log.v(TAG, "Clearing old out-action at index " + i + "|" + timestep);
 				}
