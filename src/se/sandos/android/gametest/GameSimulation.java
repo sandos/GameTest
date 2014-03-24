@@ -296,7 +296,8 @@ public class GameSimulation {
 	private MainActivity act;
 	
 	private String name;
-
+	private boolean playSound = true;
+	
 	public static class Action {
 		public int timestep = -1;
 		public int type;
@@ -314,6 +315,11 @@ public class GameSimulation {
 	
 	private int highestTimestepSeen;
 	private int highestSynchedTimestep;
+	
+	
+	public void silence(boolean a) {
+		playSound = !a;
+	}
 	
 	public GameSimulation(MainActivity activity, String name)
 	{
@@ -454,7 +460,7 @@ public class GameSimulation {
 			vY = (vY * 60000) >> SHFT;
 		} 
 
-		if(bounce && avgOffset > -100 && avgOffset < 10) {
+		if(bounce && avgOffset > -100 && avgOffset < 10 && playSound) {
 			act.soundPool.play(act.clickSoundId, 1.0f, 1.0f, 1, 0, 1.0f);
 		}
 		

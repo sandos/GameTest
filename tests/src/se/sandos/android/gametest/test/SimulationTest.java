@@ -70,6 +70,8 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	{
 		GameSimulation sim1 = new GameSimulation(act, "sim1");
 		GameSimulation sim2 = new GameSimulation(act, "sim2");
+		sim1.silence(true);
+		sim2.silence(true);
 		
 		BinaryMessage binaryMessage = new BinaryMessage();
 		
@@ -84,6 +86,8 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	{
 		GameSimulation sim1 = new GameSimulation(act, "sim1");
 		GameSimulation sim2 = new GameSimulation(act, "sim2");
+		sim1.silence(true);
+		sim2.silence(true);
 		
 		BinaryMessage binaryMessage = new BinaryMessage();
 		
@@ -103,7 +107,9 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	{
 		GameSimulation sim1 = new GameSimulation(act, "sim1");
 		GameSimulation sim2 = new GameSimulation(act, "sim2");
-		
+		sim1.silence(true);
+		sim2.silence(true);
+
  		for(int x=0; x<ITERATIONS; x++) {
  			if(x == 10) {
  				sim1.clicked();
@@ -121,6 +127,8 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	{
 		GameSimulation sim1 = new GameSimulation(act, "sim1");
 		GameSimulation sim2 = new GameSimulation(act, "sim2");
+		sim1.silence(true);
+		sim2.silence(true);
 		
  		for(int x=0; x<ITERATIONS; x++) {
  			if(x % 8 == 2) {
@@ -143,6 +151,8 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	{
 		GameSimulation sim1 = new GameSimulation(act, "sim1");
 		GameSimulation sim2 = new GameSimulation(act, "sim2");
+		sim1.silence(true);
+		sim2.silence(true);
 		
  		for(int x=0; x<ITERATIONS; x++) {
  			if(x % 3 == 2 && x < 300) {
@@ -172,6 +182,8 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	{
 		GameSimulation sim1 = new GameSimulation(act, "sim1");
 		GameSimulation sim2 = new GameSimulation(act, "sim2");
+		sim1.silence(true);
+		sim2.silence(true);
 		
 		BinaryMessage bm1 = new BinaryMessage();
 		BinaryMessage bm2 = new BinaryMessage();
@@ -218,7 +230,9 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 		for(int count=3; count<7; count++) {
 			sims.clear();
 			for(int j=0; j<count; j++) {
-				sims.put(new GameSimulation(act, "sim" + count), new ArrayDeque<BinaryMessage>(10));
+				GameSimulation gs = new GameSimulation(act, "sim" + count);
+				sims.put(gs, new ArrayDeque<BinaryMessage>(10));
+				gs.silence(true);
 			}
 			
 			for(int x=0; x<ITERATIONS; x++) {
@@ -279,6 +293,8 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 	{
 		GameSimulation sim1 = new GameSimulation(act, "sim1");
 		GameSimulation sim2 = new GameSimulation(act, "sim2");
+		sim1.silence(true);
+		sim2.silence(true);
 			
  		for(int x=0; x<ITERATIONS; x++) {
  			if(x < 300) {
