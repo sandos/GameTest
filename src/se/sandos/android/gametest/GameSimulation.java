@@ -521,18 +521,6 @@ public class GameSimulation {
 			a.applied = true;
 			//XXX - We need to "un-apply" all the pending actions that we went past going backwards in time
 			//so they get applied when we start stepping again
-			//if(timestep == 36) {
-				for(int i=0; i<actionList.length; i++) {
-					if(actionList[i].timestep != -1 && actionList[i].applied) {
-						Log.v(TAG, "" + actionList[i] + " >>" + name);
-					}
-				}
-				for(int i=0; i<actionInList.length; i++) {
-					if(actionInList[i].timestep != -1 && actionInList[i].applied) {
-						Log.v(TAG, "" + actionInList[i] + " >>" + name);
-					}
-				}
-			//}
 			for(int i=0; i<actionList.length; i++) {
 				Action r = actionList[i];
 				if(r.applied) {
