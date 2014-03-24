@@ -2,6 +2,7 @@ package se.sandos.android.gametest;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Iterator;
 
 import android.util.Log;
 
@@ -13,6 +14,7 @@ import android.util.Log;
  * @param <T>
  */
 public class History<T> {
+	private static final int DEL_SIZE = 100;
 	private Deque<T> hQ;
 	private int hSize;
 	private int stride;
@@ -21,6 +23,8 @@ public class History<T> {
 	private int lSize;
 	private int lTimestamp = -1;
 
+	private Deque<T> deleted;
+	
 	// Timestamp at end
 	private int timestamp = -1;
 
@@ -29,14 +33,25 @@ public class History<T> {
 	public History(Class<T> clz, int highDensitySize, int lowDensitySize,
 			int lowDensityStride, T empty) {
 		stride = lowDensityStride;
-		hQ = new ArrayDeque<T>();
-		lQ = new ArrayDeque<T>();
+		hQ = new ArrayDeque<T>(highDensitySize);
+		lQ = new ArrayDeque<T>(lowDensitySize);
 		
 		hSize = highDensitySize;
 		lSize = lowDensitySize;
 		this.empty = empty;
+		deleted = new ArrayDeque<T>(DEL_SIZE);
 	}
 
+	public T getDeleted() {
+		if(deleted != null && !deleted.isEmpty()) {
+			while(deleted.size() > DEL_SIZE) {
+				deleted.poll();
+			}
+			return deleted.poll();
+		}
+		return null;
+	}
+	
 	public int size() {
 		return hQ.size() + lQ.size();
 	}
@@ -75,6 +90,8 @@ public class History<T> {
 					if(lQ.size() > lSize) {
 						lQ.poll();
 					}
+				} else {
+					deleted.offer(removed);
 				}
 			}
 			//Clean out any empties
@@ -104,7 +121,12 @@ public class History<T> {
 		if(oldestHistory() > ts || (timestamp != -1 && ts > timestamp)) {
 			return null;
 		}
-		
+
+		//Just clean deleted list a bit here
+		while(deleted.size() > DEL_SIZE) {
+			deleted.poll();
+		}
+
 		//We do a "simple" rollback, we never re-mix low-density and high-density queues again:
 		//It is simply not possible to recreate the high-density data from low-density data
 		//We simply "remove" the data that is too new
@@ -118,20 +140,20 @@ public class History<T> {
 			}
 			
 			while(lTimestamp > ts) {
-				lQ.pollLast();
+				deleted.offer(lQ.pollLast());
 				lTimestamp -= stride;
 			}
 			lTimestamp -= stride;
 			return lQ.pollLast();
 		} else {
 			while(timestamp > ts && !hQ.isEmpty()) {
-				hQ.pollLast();
+				deleted.offer(hQ.pollLast());
 				timestamp--;
 			}
 			
 			while(hQ.peekLast() == empty) {
 				timestamp--;
-				hQ.pollLast();
+				deleted.offer(hQ.pollLast());
 			}
 			T r = hQ.pollLast();
 			timestamp--;
@@ -141,4 +163,43 @@ public class History<T> {
 			return r;
 		}
 	}
+	
+	public T getAt(int timestamp) {
+		if(timestamp > this.timestamp || timestamp < oldestHistory()) {
+			return null;
+		}
+		
+		if(timestamp > lTimestamp && timestamp >= this.timestamp-hQ.size()+1) {
+			int ts = this.timestamp - hQ.size() + 1;
+			Iterator<T> it;
+			for(it = hQ.iterator(); ts<timestamp && it.hasNext(); it.next()) {
+				ts++;
+			}
+			return it.next();
+		} else {
+			if(timestamp > lTimestamp) {
+				return null;
+			}
+			int ts = lTimestamp - (lQ.size()-1)*stride;
+			Iterator<T> it;
+			for(it = lQ.iterator(); ts<timestamp && it.hasNext(); it.next()) {
+				ts += stride;
+			}
+			if(ts == timestamp) {
+				return it.next();
+			} else {
+				return null;
+			}
+		}
+	}
+
+	@Override
+	public String toString() {
+		return "History [hQ=" + hQ + ", hSize=" + hSize + ", stride=" + stride
+				+ ", lQ=" + lQ + ", lSize=" + lSize + ", lTimestamp="
+				+ lTimestamp + ", deleted=" + deleted + ", timestamp="
+				+ timestamp + ", empty=" + empty + ", latest element=" + hQ.peekLast() + "]";
+	}
+	
+	
 }

@@ -68,6 +68,53 @@ public class HistoryTest extends TestCase {
 		Assert.assertNull(rewind);
 	}
 	
+	public void testGetAt() {
+		History<int[]> h = new History<int[]>(int[].class, 5, 30, 5, new int[1]);
+		
+		int timestamp = 1;
+		for(int i=0; i<500; i++) {
+			int[] t = new int[1];
+			t[0] = timestamp;
+			h.addNewRecord(t, timestamp++);
+		}
+		
+		int[] at = h.getAt(timestamp-1);
+		Assert.assertNotNull(at);
+		Assert.assertEquals(timestamp-1, at[0]);
+		
+		at = h.getAt(timestamp-2);
+		Assert.assertNotNull(at);
+		Assert.assertEquals(timestamp-2, at[0]);
+
+		at = h.getAt(timestamp-3);
+		Assert.assertNotNull(at);
+		Assert.assertEquals(timestamp-3, at[0]);
+
+		at = h.getAt(timestamp-4);
+		Assert.assertNotNull(at);
+		Assert.assertEquals(timestamp-4, at[0]);
+		
+		at = h.getAt(timestamp-5);
+		Assert.assertNotNull(at);
+		Assert.assertEquals(timestamp-5, at[0]);
+
+		at = h.getAt(timestamp-6);
+		Assert.assertNull(at);
+
+		at = h.getAt(timestamp-7);
+		Assert.assertNull(at);
+
+		at = h.getAt(timestamp-8);
+		Assert.assertNull(at);
+
+		at = h.getAt(timestamp-9);
+		Assert.assertNull(at);
+
+		at = h.getAt(timestamp-10);
+		Assert.assertNotNull(at);
+		Assert.assertEquals(timestamp-10, at[0]);
+	}
+	
 	public void testPerformance() {
 		History<int[]> h = new History<int[]>(int[].class, 5, 30, 5, new int[1]);
 		int timestamp = 1;

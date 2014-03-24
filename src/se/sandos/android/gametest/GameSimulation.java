@@ -24,14 +24,10 @@ import android.util.Log;
 public class GameSimulation {
 	private static final int SHOTS_ALIVE_TIME = 90;
 
-	//Column number for history array
-	private static final int HISTORY_TIMESTEP_COL = 7;
-	
 	private static final int MEDIAN_NUMBER = 23;
 	private static final int ENEMY_MAX = 10;
 	public static final int SHOTS_MAX = 150;
 	private static final int HISTORY_LENGTH = 100;
-	private static final int STATE_SIZE = 8;
 	
 	private int timestep;
 	
@@ -39,7 +35,124 @@ public class GameSimulation {
 	
 	//Player
 	private int pX, pY, vX, vY, r, vR;
-	private int[][] history = new int[HISTORY_LENGTH][STATE_SIZE];
+	//private int[][] history = new int[HISTORY_LENGTH][STATE_SIZE];
+	History<State> history = new History<State>(State.class, 10, 40, 5, new State(this));
+	
+	public static class State {
+		public int timestep, pX, pY, vX, vY, r, vR;
+		
+		public Shot[] shots;
+		
+		public State(GameSimulation sim) {
+			pX        = sim.pX;
+			pY        = sim.pY;
+			vX        = sim.vX;
+			vY        = sim.vY;
+			r         = sim.r;
+			vR 		  = sim.vR;
+			timestep = sim.timestep;
+		
+			if(sim.shots != null) {
+				shots = new Shot[sim.shots.length];
+				for(int i=0; i<shots.length; i++) {
+					shots[i] = new Shot(sim.shots[i]);
+				}
+			}
+		}
+		
+		public void export(GameSimulation sim) {
+			sim.pX = pX;
+			sim.pY = pY;
+			sim.vX = vX;
+			sim.vY = vY;
+			sim.r = r;
+			sim.vR = vR;
+			sim.timestep = timestep;
+			for(int i=0; i<shots.length; i++) {
+				sim.shots[i] = shots[i];
+			}
+		}
+
+		public void inport(GameSimulation sim) {
+			pX        = sim.pX;
+			pY        = sim.pY;
+			vX        = sim.vX;
+			vY        = sim.vY;
+			r         = sim.r;
+			vR 		  = sim.vR;
+			timestep = sim.timestep;
+		
+			if(sim.shots != null) {
+				shots = new Shot[sim.shots.length];
+				for(int i=0; i<shots.length; i++) {
+					shots[i] = new Shot(sim.shots[i]);
+				}
+			}
+		}
+		
+		public boolean differs(State at) {
+			if(at.timestep != timestep) {
+				return false;
+			}
+			
+			if(at.hashCode() == hashCode()) {
+				return false;
+			}
+			
+			if(pX != at.pX) {
+				Log.w("GS", "pX differs: " + pX + "|" + at.pX);
+				return true;
+			}
+
+			if(pY != at.pY) {
+				Log.w("GS", "pY differs: " + pY + "|" + at.pY);
+				return true;
+			}
+			
+			if(vY != at.vY) {
+				Log.w("GS", "vY differs: " + vY + "|" + at.vY);
+				return true;
+			}
+			
+			if(vX != at.vX) {
+				Log.w("GS", "vX differs: " + vX + "|" + at.vX);
+				return true;
+			}
+			
+			for(int i=0; i<shots.length; i++) {
+				if(shots[i].equals(at.shots[i])) {
+					continue;
+				}
+				Log.w("GS", "Differing shot: " + shots[i] + "|" + at.shots[i]);
+				return false;
+			}
+
+			Log.w("GS", "Differ on sth else");
+			return true;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + pX;
+			result = prime * result + pY;
+			result = prime * result + r;
+			result = prime * result + Arrays.hashCode(shots);
+			result = prime * result + timestep;
+			result = prime * result + vR;
+			result = prime * result + vX;
+			result = prime * result + vY;
+			return result;
+		}
+
+		@Override
+		public String toString() {
+			return "State [timestep=" + timestep + ", pX=" + pX + ", pY=" + pY
+					+ ", vX=" + vX + ", vY=" + vY + ", r=" + r + ", vR=" + vR
+					+ ", shots=" + Arrays.toString(shots) + "]";
+		}
+	}
 	
 	public static class Enemy {
 		int x, y, vX, vY, r, vR;
@@ -98,6 +211,18 @@ public class GameSimulation {
 		int x, y, vX, vY;
 		int aliveCounter;
 		boolean alive;
+		
+		public Shot() {
+		}
+		
+		public Shot(Shot s) {
+			x = s.x;
+			y = s.y;
+			vX = s.vX;
+			vY = s.vY;
+			aliveCounter = s.aliveCounter;
+			alive = s.alive;
+		}
 		
 		public void serialize(BinaryMessage b) throws IOException
 		{
@@ -177,6 +302,11 @@ public class GameSimulation {
 		public int type;
 		public int x, y;
 		public boolean applied = false;
+		@Override
+		public String toString() {
+			return "Action [timestep=" + timestep + ", type=" + type + ", x="
+					+ x + ", y=" + y + ", applied=" + applied + "]";
+		}
 	}
 	
 	//Player input from network
@@ -212,9 +342,9 @@ public class GameSimulation {
 		{
 			actionInList[i] = new Action();
 		}
-		for(int i=0; i<HISTORY_LENGTH; i++) {
-			history[i][HISTORY_TIMESTEP_COL] = -1;
-		}
+//		for(int i=0; i<HISTORY_LENGTH; i++) {
+//			history[i][HISTORY_TIMESTEP_COL] = -1;
+//		}
 
 	}
 	
@@ -238,6 +368,8 @@ public class GameSimulation {
 		boolean clicked = false;
 		boolean shot = false;
 		int shotVX = 0, shotVY = 0;
+		
+		//XXX This is sort of all fucked up. We sometimes iterate two times, to reach all actions
 		for(int i=0; i<actionList.length; i++) {
 			if(actionList[i].timestep <= timestep && actionList[i].timestep != -1) {
 				if(actionList[i].applied) {
@@ -370,36 +502,37 @@ public class GameSimulation {
 		offset--;
 		if(offset >= 0 && offset < HISTORY_LENGTH)
 		{
-			pX = history[offset][0];
-			pY = history[offset][1];
-			vX = history[offset][2];
-			vY = history[offset][3];
-			r  = history[offset][4];
-			vR = history[offset][5];
-			int ts = history[offset][7];
-			
-			//Move history itself
-			for(int i=0; i<HISTORY_LENGTH-offset-1; i++)
-			{
-				System.arraycopy(history[i+offset+1], 0, history[i], 0, STATE_SIZE);
-			}
-			for(int i=HISTORY_LENGTH-offset-1; i<HISTORY_LENGTH; i++) {
-				history[i][HISTORY_TIMESTEP_COL] = -1;
-			}
+			State rewind = history.rewind(a.timestep);
+			Log.v(TAG, "Rewound to " + a.timestep + " from " + timestep + ", history says we are at " + rewind.timestep + " >>" + name);
+			int oldTS = timestep;
+			rewind.export(this);
+			timestep = oldTS;
+
 			//XXX We just pray that we never end up in the "rewound" part of history, this might contain too old entries
 			//We should really just add a timestep field to the history itself
 			
-			Log.v(TAG, "Rewound to " + a.timestep + " from " + timestep + ", history says we are at " + ts + " >>" + name);
 			if(a.timestep < highestSynchedTimestep) {
 				Log.v(TAG, "WOOOAH! Why did we rewind to BEFORE a verified point in time ?!?!!?");
 			}
-			if(ts != a.timestep) {
+			if(rewind.timestep != a.timestep) {
 				Log.v(TAG, "AAAAAAGH! We died!");
 			}
 
 			a.applied = true;
 			//XXX - We need to "un-apply" all the pending actions that we went past going backwards in time
 			//so they get applied when we start stepping again
+			//if(timestep == 36) {
+				for(int i=0; i<actionList.length; i++) {
+					if(actionList[i].timestep != -1 && actionList[i].applied) {
+						Log.v(TAG, "" + actionList[i] + " >>" + name);
+					}
+				}
+				for(int i=0; i<actionInList.length; i++) {
+					if(actionInList[i].timestep != -1 && actionInList[i].applied) {
+						Log.v(TAG, "" + actionInList[i] + " >>" + name);
+					}
+				}
+			//}
 			for(int i=0; i<actionList.length; i++) {
 				Action r = actionList[i];
 				if(r.applied) {
@@ -421,7 +554,8 @@ public class GameSimulation {
 			
 			//We want to move one step ahead of our last step (as is normal) in this iteration, before returning from step()
 			highestTimestepSeen++;
-			timestep = a.timestep;
+			//timestep = a.timestep;
+			rewind.export(this);
 			
 			return true;
 		}
@@ -435,20 +569,15 @@ public class GameSimulation {
 	}
 
 	private void moveHistory() {
-		//Move history
-		for(int i=HISTORY_LENGTH-2; i>=0; i--)
-		{
-			System.arraycopy(history[i], 0,  history[i+1], 0, STATE_SIZE);
+		State state = history.getDeleted();
+		
+		if(state == null) {
+			state = new State(this);
+		} else {
+			state.inport(this);
 		}
 		
-		history[0][0] = pX;
-		history[0][1] = pY;
-		history[0][2] = vX;
-		history[0][3] = vY;
-		history[0][4] = r;
-		history[0][5] = vR;
-		history[0][6] = hashCode();
-		history[0][7] = timestep;
+		history.addNewRecord(state, timestep);
 	}
 	
 	public synchronized void step()
@@ -555,16 +684,16 @@ public class GameSimulation {
 		int peervY = d.readInt();
 
 		if(peerTimestep < timestep) {
-			int offset = timestep - peerTimestep;
-			offset--;
-			if(offset < HISTORY_LENGTH && hash != history[offset][6] && history[offset][7] != -1) {
-				//Log.v(TAG, "SyncHIST: " + peerTimestep + "|" + printState(history[offset]) + " [" + peer.getHostAddress() + "] " + highestSynchedTimestep);
-				Log.v(TAG, "Synchist: " + peerX +":" + history[offset][0] + "|" + peerY +":" + history[offset][1] + "|" + peervX + ":" + history[offset][2] + "|" + peervY +":" + history[offset][3] + " ts:" +history[offset][HISTORY_TIMESTEP_COL] + " now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
-			} else {
-				if(highestSynchedTimestep < peerTimestep) {
-					highestSynchedTimestep = peerTimestep;
-				}
-			}
+//			int offset = timestep - peerTimestep;
+//			offset--;
+//			if(offset < HISTORY_LENGTH && hash != history[offset][6] && history[offset][7] != -1) {
+//				//Log.v(TAG, "SyncHIST: " + peerTimestep + "|" + printState(history[offset]) + " [" + peer.getHostAddress() + "] " + highestSynchedTimestep);
+//				Log.v(TAG, "Synchist: " + peerX +":" + history[offset][0] + "|" + peerY +":" + history[offset][1] + "|" + peervX + ":" + history[offset][2] + "|" + peervY +":" + history[offset][3] + " ts:" +history[offset][HISTORY_TIMESTEP_COL] + " now: " + timestep + "|" + highestSynchedTimestep + " >>" + name);
+//			} else {
+//				if(highestSynchedTimestep < peerTimestep) {
+//					highestSynchedTimestep = peerTimestep;
+//				}
+//			}
 		}
 		else if(peerTimestep == timestep)
 		{
@@ -577,10 +706,6 @@ public class GameSimulation {
 				}
 			}
 		}
-
-//		Log.v(TAG, "Handled message " + peerTimestep + " " + hash);
-		
-//		Log.v(TAG, "Median of medians: " + m);
 	}
 
 	private void cleanIncomingActionLists() {
@@ -615,11 +740,6 @@ public class GameSimulation {
 		return median.intValue();
 	}
 
-	private String printState(int[] s)
-	{
-		return "XY: " + s[0] +":" + s[1] + " vXY: " + s[2] +":" + s[3] + " rVr: " + s[4] + "|" + s[5] + " h: " + s[6] + " TS:" + s[HISTORY_TIMESTEP_COL];
-	}
-	
 	public int hashCode()
 	{
 		return pX ^ pY ^ vX ^ vY ^ r ^ vR ^ Arrays.deepHashCode(shots) ^ Arrays.hashCode(enemies);
@@ -636,7 +756,6 @@ public class GameSimulation {
 		for(int i=0; i<actionOutList.length; i++)
 		{
 			if(actionOutList[i].timestep != -1) {
-//				Log.v(TAG, "Writing action to network: " + actionOutList[i].timestep + "|" + timestep + "| Index: " + i);
 				d.writeInt(actionOutList[i].timestep);
 				d.writeInt(actionOutList[i].type);
 				d.writeInt(actionOutList[i].x);
@@ -649,18 +768,6 @@ public class GameSimulation {
 		d.writeInt(vX);
 		d.writeInt(vY);
 		
-		//numOutActions = 0;
-//		d.writeInt(pX).writeInt(pY).writeInt(vX).writeInt(vY).writeInt(r).writeInt(vR);
-//		
-//		for(int i=0; i<ENEMY_MAX; i++)
-//		{
-//			enemies[i].serialize(d);
-//		}
-//		
-//		for(int i=0; i<SHOTS_MAX; i++)
-//		{
-//			shots[i].serialize(d);
-//		}
 	}
 
 	private void cleanActionOutList() {
@@ -760,7 +867,6 @@ public class GameSimulation {
 		return timestep;
 	}
 	
-	
 	@Override
 	public String toString() {
 		return "GameSimulation [timestep=" + timestep
@@ -770,35 +876,13 @@ public class GameSimulation {
 				+ ", highestSynchedTimestep=" + highestSynchedTimestep + "]";
 	}
 	
-	
-	public boolean checkHistory()
-	{
-		for(int i=0; i<HISTORY_LENGTH-1; i++) {
-			
-			if(history[i][HISTORY_TIMESTEP_COL] != -1 && history[i+1][HISTORY_TIMESTEP_COL] != -1 && history[i+1][HISTORY_TIMESTEP_COL] != history[i][HISTORY_TIMESTEP_COL]-1) {
-				Log.v(TAG, "History incorrect at " + i + " :" + history[i+1][HISTORY_TIMESTEP_COL] + "|" + history[i][HISTORY_TIMESTEP_COL]);
-				return false;
-			}
-		}
-		
-		return true;
-	}
-	
-	//Compare our history with a peers' history. This is for testing 
 	public int compareHistory(GameSimulation gs, int age) {
-		for(int i=0; i<history.length; i++) {
-			int ts = history[i][HISTORY_TIMESTEP_COL];
-			
-			if(ts == -1 || (timestep - ts) < age) {
-				continue;
-			}
-			for(int j=0; j<gs.history.length; j++) {
-				if(gs.history[j][HISTORY_TIMESTEP_COL] == ts) {
-					if(!Arrays.equals(history[i], gs.history[j])) {
-						Log.d(TAG, "History is NOT equal! " + printState(history[i]) + "|" + printState(gs.history[j]));
-						return history[i][HISTORY_TIMESTEP_COL];
-					}
-				}
+		for(int i=timestep-1-age; i>=history.oldestHistory(); i--) {
+			State at = history.getAt(i);
+
+			State at2 = gs.history.getAt(i);
+			if(at2 != null && at != null && at.differs(at2)) {
+				return i;
 			}
 		}
 		return -1;
