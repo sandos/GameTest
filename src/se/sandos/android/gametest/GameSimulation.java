@@ -150,7 +150,7 @@ public class GameSimulation {
 		public String toString() {
 			return "State [timestep=" + timestep + ", pX=" + pX + ", pY=" + pY
 					+ ", vX=" + vX + ", vY=" + vY + ", r=" + r + ", vR=" + vR
-					+ ", shots=" + Arrays.toString(shots) + "]";
+					+ ", shots= (hash=" + Arrays.deepHashCode(shots) + ")" + Arrays.toString(shots) + "]";
 		}
 	}
 	
@@ -842,7 +842,7 @@ public class GameSimulation {
 			actionOutList[outfreeSlot].type     = 1;
 			actionOutList[outfreeSlot].applied  = false;
 			
-			if((x < -0.0001 || x > 0.0001f) && (y < -0.0001f || y > 0.0001f)) {
+			if((x < -0.0001 || x > 0.0001f) || (y < -0.0001f || y > 0.0001f)) {
 				actionList[freeSlot].type = 2;
 				actionList[freeSlot].x = (int) ((x-0.5f)*SCALE);
 				actionList[freeSlot].y = (int) ((y-0.5f)*SCALE);
