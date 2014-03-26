@@ -188,6 +188,7 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 		stepSynched(sim1, sim2, temp, false);
 		stepSynched(sim1, sim2, temp, false);
 		stepSynched(sim1, sim2, temp, false);
+		Assert.assertEquals(-1, sim1.compareHistory(sim2, 1));
 		
 		sim1.clicked();
 		sim1.step();
@@ -203,16 +204,10 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 		sim2.step();
 		
 		//We diverge here, network is desynched
-		//Assert.assertEquals(6, sim1.compareHistory(sim2, 1));
+		//This also tests that compareHistory works!
+		Assert.assertEquals(6, sim1.compareHistory(sim2, 0));
 
 		stepSynched(sim1, sim2, temp, false);
-//		stepSynched(sim1, sim2, temp, false);
-//		stepSynched(sim1, sim2, temp, false);
-//		stepSynched(sim1, sim2, temp, false);
-//		stepSynched(sim1, sim2, temp, false);
-//		stepSynched(sim1, sim2, temp, false);
-//		stepSynched(sim1, sim2, temp, false);
-//		stepSynched(sim1, sim2, temp, false);
 
 		Assert.assertEquals(-1, sim1.compareHistory(sim2, 2));
 		Assert.assertEquals("Simulator lagging due to input", 8,  sim2.timestep());
