@@ -1,8 +1,6 @@
 package se.sandos.android.gametest.test;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayDeque;
@@ -17,7 +15,6 @@ import junit.framework.Assert;
 import junit.framework.AssertionFailedError;
 import se.sandos.android.gametest.BinaryMessage;
 import se.sandos.android.gametest.GameSimulation;
-import se.sandos.android.gametest.GameSimulation.Action;
 import se.sandos.android.gametest.MainActivity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -185,8 +182,6 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 		sim1.silence(true);
 		sim2.silence(true);
 		
-		BinaryMessage bm1 = new BinaryMessage();
-		BinaryMessage bm2 = new BinaryMessage();
 		BinaryMessage temp = new BinaryMessage();
 		
 		sim1.clicked();
