@@ -18,7 +18,9 @@
         android:theme="@style/AppTheme" android:hardwareAccelerated="false">
         <activity
             android:name="se.sandos.android.gametest.MainActivity"
-            android:label="@string/app_name" >
+            android:label="@string/app_name"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
