@@ -4,6 +4,7 @@ import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.SurfaceHolder;
 
 public class GameView extends GLSurfaceView {
 
@@ -14,10 +15,15 @@ public class GameView extends GLSurfaceView {
 	
 	private int counter;
 	
-	public GameView(Context context) {
+	public GameView(Context context, boolean rescale, int width, int height) {
 		super(context);
 		
 		setEGLContextClientVersion(2);
+		
+		if(rescale) {
+			SurfaceHolder holder = getHolder();
+			holder.setFixedSize(width/2, height/2);
+		}
 		
 //		setDebugFlags(DEBUG_CHECK_GL_ERROR | DEBUG_LOG_GL_CALLS);
 	}

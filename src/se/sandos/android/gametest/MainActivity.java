@@ -29,6 +29,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.os.SystemClock;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -78,7 +79,13 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		gameView = new GameView(getApplicationContext());
+		DisplayMetrics dm = new DisplayMetrics();
+		getWindowManager().getDefaultDisplay().getMetrics(dm);
+		if(dm.widthPixels > 1920 || dm.heightPixels > 1080) {
+			gameView = new GameView(getApplicationContext(), true, 0, 0);
+		} else {
+			gameView = new GameView(getApplicationContext(), false, dm.widthPixels, dm.heightPixels);
+		}
 		GameRenderer gr = new GameRenderer();
 		gameView.setRenderer(gr);
 		setContentView(gameView);
