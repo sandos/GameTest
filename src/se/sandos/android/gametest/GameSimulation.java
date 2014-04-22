@@ -583,7 +583,7 @@ public class GameSimulation {
 			if(avgOffset < -10) {
 				actualStep();
 			}
-			if(avgOffset < -1) {
+			if(avgOffset < 0) {
 //				Log.v(TAG, "Running late, small step " + avgOffset);
 				actualStep();
 			} else if(avgOffset > 10) {
