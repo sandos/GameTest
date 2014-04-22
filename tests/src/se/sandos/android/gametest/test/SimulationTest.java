@@ -175,6 +175,27 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
  		}
 	}
 	
+	public void testFullSync() throws UnknownHostException, IOException {
+		BinaryMessage temp = new BinaryMessage();
+		
+		GameSimulation sim1 = new GameSimulation(act, "sim1");
+		GameSimulation sim2 = new GameSimulation(act, "sim2");
+		sim1.silence(true);
+		sim2.silence(true);
+		
+		sim1.clicked(1.0f, 1.0f);
+		sim1.clicked();
+		for(int i=0; i<300; i++) {
+			sim1.step();
+		}
+
+		for(int i=0; i<10000; i++) {
+			stepSynched(sim1, sim2, temp, true);
+		}
+
+		
+	}
+	
 	public void testOutOfOrderPackets() throws UnknownHostException, IOException
 	{
 		GameSimulation sim1 = new GameSimulation(act, "sim1");
