@@ -189,7 +189,7 @@ public class SimulationTest extends android.test.ActivityUnitTestCase<MainActivi
 			sim1.step();
 		}
 
-		for(int i=0; i<10000; i++) {
+		for(int i=0; i<26; i++) {
 			stepSynched(sim1, sim2, temp, true);
 		}
 
